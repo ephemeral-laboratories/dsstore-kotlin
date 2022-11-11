@@ -38,6 +38,13 @@ interface DataInput {
     fun readLong(): Long
 
     /**
+     * Reads an 8-byte *little* endian integer.
+     *
+     * @return the long.
+     */
+    fun readLongLE(): Long
+
+    /**
      * Reads a four-character-code.
      *
      * @return the fourcc.

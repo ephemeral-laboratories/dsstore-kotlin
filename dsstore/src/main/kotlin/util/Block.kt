@@ -35,6 +35,10 @@ class Block(private val buffer: ByteBuffer) : DataInput {
         return buffer.long
     }
 
+    override fun readLongLE(): Long {
+        requireAvailable(8)
+        return buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).long
+    }
     override fun readFourCC(): FourCC {
         return FourCC(readArray(4).toString(StandardCharsets.US_ASCII))
     }

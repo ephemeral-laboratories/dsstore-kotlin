@@ -203,9 +203,12 @@ class DSStoreProperties {
         // val ? = FourCC("lsvP")
 
         /**
-         * dutc timestamps; directories only. One or both may appear. Typically the same as the directory's
+         * dutc timestamps; directories only. One or both may appear. Typically, the same as the directory's
          * modification date. Unknown purpose; appeared in 10.7 or 10.8. Possibly used to detect when logS
          * needs to be recalculated?
+         *
+         * I also see these stored as blobs in some files - in this case, it appears to be a little-endian
+         * value, but it isn't stored using the same logic as dutc.
          */
         // val ? = FourCC("modD")
         // val ? = FourCC("moDD")

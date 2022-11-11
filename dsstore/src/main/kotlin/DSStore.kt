@@ -31,6 +31,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
 
     private fun walk(blockNumber: Int): Sequence<DSStoreRecord> {
         return sequence {
+            println("walk($blockNumber) start")
             val block = buddyFile.readBlock(blockNumber)
             val nodeHeader = DSStoreNodeHeader.readFrom(block)
             if (nodeHeader.p == 0) {
@@ -49,6 +50,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                 }
                 yieldAll(walk(nodeHeader.p))
             }
+            println("walk($blockNumber) stop")
         }
     }
 
