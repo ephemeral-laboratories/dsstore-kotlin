@@ -10,14 +10,15 @@ import java.nio.file.Path
 class DSStore(private val buddyFile: BuddyFile) : Closeable {
 
     /**
-     * Support method for indexing by filename to get a partial lookup
-     * which can then be used to look up properties for a single file.
+     * Support method for convenient indexing.
+     * Finds the record and decodes the value.
      *
      * @param filename the filename.
      * @return the partial lookup object.
      */
-    operator fun get(filename: String): Partial {
-        return Partial(filename)
+    operator fun get(filename: String, propertyId: FourCC): Any? {
+        val record = find(DSStoreRecordKey(filename, propertyId))
+        return record?.decodeValue()
     }
 
     /**
@@ -127,23 +128,6 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
         fun open(path: Path, fileMode: FileMode = FileMode.READ_ONLY): DSStore {
             val buddyFile = BuddyFile.open(path, fileMode)
             return DSStore(buddyFile)
-        }
-    }
-
-    /**
-     * Class used for intermediate lookups. See [DSStore.get].
-     */
-    inner class Partial(private val filename: String) {
-
-        /**
-         * Looks up a property for a file.
-         *
-         * @param propertyId the property ID.
-         * @return if a record is found, the decoded value, otherwise `null`.
-         */
-        operator fun get(propertyId: FourCC): Any? {
-            val record = find(DSStoreRecordKey(filename, propertyId))
-            return record?.decodeValue()
         }
     }
 }
