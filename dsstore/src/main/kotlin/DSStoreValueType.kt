@@ -1,7 +1,11 @@
 
+import types.Blob
 import types.FourCC
 import util.DataInput
+import util.DataOutput
 import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.time.Instant
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 
@@ -16,6 +20,8 @@ enum class DSStoreValueType(val typeId: FourCC) {
      */
     INT(FourCC("long")) {
         override fun readValue(stream: DataInput) = stream.readInt()
+        override fun writeValue(value: Any, stream: DataOutput) = stream.writeInt(value as Int)
+        override fun calculateSize(value: Any) = 4
     },
 
     /**
@@ -23,6 +29,8 @@ enum class DSStoreValueType(val typeId: FourCC) {
      */
     SHORT(FourCC("shor")) {
         override fun readValue(stream: DataInput) = stream.readInt().toShort()
+        override fun writeValue(value: Any, stream: DataOutput) = stream.writeInt((value as Short).toInt())
+        override fun calculateSize(value: Any) = 4
     },
 
     /**
@@ -30,6 +38,8 @@ enum class DSStoreValueType(val typeId: FourCC) {
      */
     BOOL(FourCC("bool")) {
         override fun readValue(stream: DataInput) = stream.readByte() != 0.toByte()
+        override fun writeValue(value: Any, stream: DataOutput) = stream.writeByte(if (value as Boolean) 1 else 0)
+        override fun calculateSize(value: Any) = 1
     },
 
     /**
@@ -37,6 +47,8 @@ enum class DSStoreValueType(val typeId: FourCC) {
      */
     TYPE(FourCC("type")) {
         override fun readValue(stream: DataInput) = stream.readFourCC()
+        override fun writeValue(value: Any, stream: DataOutput) = stream.writeFourCC(value as FourCC)
+        override fun calculateSize(value: Any) = 4
     },
 
     /**
@@ -47,6 +59,14 @@ enum class DSStoreValueType(val typeId: FourCC) {
             val length = stream.readInt()
             return stream.readBlob(length)
         }
+
+        override fun writeValue(value: Any, stream: DataOutput) {
+            value as Blob
+            stream.writeInt(value.size)
+            stream.writeBlob(value)
+        }
+
+        override fun calculateSize(value: Any) = 4 + (value as Blob).size
     },
 
     /**
@@ -57,6 +77,14 @@ enum class DSStoreValueType(val typeId: FourCC) {
             val length = stream.readInt()
             return stream.readString(length * 2, StandardCharsets.UTF_16BE)
         }
+
+        override fun writeValue(value: Any, stream: DataOutput) {
+            value as String
+            stream.writeInt(value.length)
+            stream.writeString(value, StandardCharsets.UTF_16BE)
+        }
+
+        override fun calculateSize(value: Any) = 4 + (value as String).length * 2
     },
 
     /**
@@ -64,6 +92,8 @@ enum class DSStoreValueType(val typeId: FourCC) {
      */
     LONG(FourCC("comp")) {
         override fun readValue(stream: DataInput) = stream.readLong()
+        override fun writeValue(value: Any, stream: DataOutput) = stream.writeLong(value as Long)
+        override fun calculateSize(value: Any) = 8
     },
 
     /**
@@ -78,6 +108,14 @@ enum class DSStoreValueType(val typeId: FourCC) {
                 .plusNanos(1_000_000_000L * (value % MacDateDivisor) / MacDateDivisor)
                 .toInstant()
         }
+
+        override fun writeValue(value: Any, stream: DataOutput) {
+            val duration = Duration.between(MacEpoch, value as Instant)
+            val encoded = duration.seconds * MacDateDivisor + (duration.nano * MacDateDivisor / 1_000_000_000L)
+            stream.writeLong(encoded)
+        }
+
+        override fun calculateSize(value: Any) = 8
     },
 
     ;
@@ -89,6 +127,22 @@ enum class DSStoreValueType(val typeId: FourCC) {
      * @return the read value.
      */
     abstract fun readValue(stream: DataInput): Any
+
+    /**
+     * Writes the value to a stream.
+     *
+     * @param value the value to write.
+     * @param stream the stream.
+     */
+    abstract fun writeValue(value: Any, stream: DataOutput)
+
+    /**
+     * Calculates the encoded size of a value.
+     *
+     * @param value the value.
+     * @return the size in bytes.
+     */
+    abstract fun calculateSize(value: Any): Int
 
     companion object {
         private val MacEpoch = ZonedDateTime.of(1904, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)

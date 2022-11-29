@@ -7,6 +7,7 @@ import java.nio.ByteBuffer
  * An immutable byte array.
  */
 class Blob(private val data: ByteArray) {
+    val size get() = data.size
 
     /**
      * Converts to a block, useful for performing further decoding of the value.

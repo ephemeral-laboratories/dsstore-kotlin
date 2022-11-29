@@ -33,15 +33,15 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
     private fun walk(blockNumber: Int): Sequence<DSStoreRecord> {
         return sequence {
             val block = buddyFile.readBlock(blockNumber)
-            val node = DSStoreNode.readFrom(block)
-            if (node.isExternal) {
-                yieldAll(node.records)
-            } else {
-                node.childNodeBlockNumbers.zip(node.records).forEach { (childNodeBlockNumber, record) ->
-                    yieldAll(walk(childNodeBlockNumber))
-                    yield(record)
+            when (val node = DSStoreNode.readFrom(block)) {
+                is DSStoreNode.Leaf -> yieldAll(node.records)
+                is DSStoreNode.Branch -> {
+                    node.childNodeBlockNumbers.zip(node.records).forEach { (childNodeBlockNumber, record) ->
+                        yieldAll(walk(childNodeBlockNumber))
+                        yield(record)
+                    }
+                    yieldAll(walk(node.childNodeBlockNumbers.last()))
                 }
-                yieldAll(walk(node.lastChildNodeBlockNumber))
             }
         }
     }
@@ -60,36 +60,38 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
         // Logic in here is VERY similar to the logic in `walk` -
         // the main difference is that it skips iterating children if the value cannot be there.
         val block = buddyFile.readBlock(blockNumber)
-        val node = DSStoreNode.readFrom(block)
-        if (node.isExternal) {
-            node.records.forEach { record ->
-                val comp = record.compareToKey(key)
-                if (comp == 0) {
-                    // record == key
-                    return record
-                } else if (comp < 0) {
-                    // record < key, keep looking
-                } else {
-                    // comp > 0, record > key, stop looking
-                    return null
+        when (val node = DSStoreNode.readFrom(block)) {
+            is DSStoreNode.Leaf -> {
+                node.records.forEach { record ->
+                    val comp = record.compareToKey(key)
+                    if (comp == 0) {
+                        // record == key
+                        return record
+                    } else if (comp < 0) {
+                        // record < key, keep looking
+                    } else {
+                        // comp > 0, record > key, stop looking
+                        return null
+                    }
                 }
+                return null
             }
-            return null
-        } else {
-            node.records.forEachIndexed { index, record ->
-                val comp = record.compareToKey(key)
-                if (comp == 0) {
-                    // record == key
-                    return record
-                } else if (comp < 0) {
-                    // record < key, keep looking, no need to search the child node either
-                } else {
-                    // comp > 0, record > key, search the previous child block and then stop looking
-                    return find(key, node.childNodeBlockNumbers[index])
+            is DSStoreNode.Branch -> {
+                node.records.forEachIndexed { index, record ->
+                    val comp = record.compareToKey(key)
+                    if (comp == 0) {
+                        // record == key
+                        return record
+                    } else if (comp < 0) {
+                        // record < key, keep looking, no need to search the child node either
+                    } else {
+                        // comp > 0, record > key, search the previous child block and then stop looking
+                        return find(key, node.childNodeBlockNumbers[index])
+                    }
                 }
+                // If we're still going by this point we have to search the right-most node still
+                return find(key, node.childNodeBlockNumbers.last())
             }
-            // If we're still going by this point we have to search the right-most node still
-            return find(key, node.lastChildNodeBlockNumber)
         }
     }
 

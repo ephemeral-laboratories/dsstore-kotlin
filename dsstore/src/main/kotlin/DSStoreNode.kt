@@ -1,17 +1,15 @@
-import util.Block
+import util.DataInput
 
 /**
  * Represents a single node in the tree.
  */
-class DSStoreNode(
-    private val nodeHeader: DSStoreNodeHeader,
-    val records: List<DSStoreRecord>,
-    val childNodeBlockNumbers: List<Int>,
-) {
-    val isExternal get() = nodeHeader.p == 0
-    val isInternal get() = !isExternal
-    val count get() = nodeHeader.count
-    val lastChildNodeBlockNumber get() = nodeHeader.p
+sealed class DSStoreNode {
+    /**
+     * Calculates the space required to store the node.
+     *
+     * @return the size of the node, in bytes.
+     */
+    abstract fun calculateSize(): Int
 
     companion object {
 
@@ -21,26 +19,40 @@ class DSStoreNode(
          * @param stream the stream to read from.
          * @return the read node.
          */
-        fun readFrom(block: Block): DSStoreNode {
-            val nodeHeader = DSStoreNodeHeader.readFrom(block)
+        fun readFrom(stream: DataInput): DSStoreNode {
+            val lastChildNodeBlockNumber = stream.readInt()
+            val count = stream.readInt()
 
-            val records = mutableListOf<DSStoreRecord>()
-            val childNodeBlockNumbers = mutableListOf<Int>()
-
-            if (nodeHeader.p == 0) {
+            if (lastChildNodeBlockNumber == 0) {
                 // External (leaf) case
-                repeat(nodeHeader.count) {
-                    records.add(DSStoreRecord.readFrom(block))
+                val records = mutableListOf<DSStoreRecord>()
+                repeat(count) {
+                    records.add(DSStoreRecord.readFrom(stream))
                 }
+                return Leaf(records.toList())
             } else {
                 // Internal (branch) case
-                repeat(nodeHeader.count) {
-                    childNodeBlockNumbers.add(block.readInt())
-                    records.add(DSStoreRecord.readFrom(block))
+                val records = mutableListOf<DSStoreRecord>()
+                val childNodeBlockNumbers = mutableListOf<Int>()
+                repeat(count) {
+                    childNodeBlockNumbers.add(stream.readInt())
+                    records.add(DSStoreRecord.readFrom(stream))
                 }
+                childNodeBlockNumbers.add(lastChildNodeBlockNumber)
+                return Branch(records.toList(), childNodeBlockNumbers.toList())
             }
+        }
+    }
 
-            return DSStoreNode(nodeHeader, records.toList(), childNodeBlockNumbers.toList())
+    class Leaf(val records: List<DSStoreRecord>) : DSStoreNode() {
+        override fun calculateSize(): Int {
+            return 8 + records.sumOf(DSStoreRecord::calculateSize)
+        }
+    }
+
+    class Branch(val records: List<DSStoreRecord>, val childNodeBlockNumbers: List<Int>) : DSStoreNode() {
+        override fun calculateSize(): Int {
+            return 8 + records.sumOf(DSStoreRecord::calculateSize) + childNodeBlockNumbers.size * 4
         }
     }
 }

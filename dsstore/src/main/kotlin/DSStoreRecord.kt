@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets
 data class DSStoreRecord(
     val filename: String,
     val propertyId: FourCC,
-    val typeId: FourCC,
+    val typeId: DSStoreValueType,
     val value: Any,
 ) {
     /**
@@ -52,6 +52,13 @@ data class DSStoreRecord(
         return codec.decode(value.toBlock())
     }
 
+    /**
+     * Calculates the space required to encode this record.
+     *
+     * @return the size of this record in bytes.
+     */
+    fun calculateSize() = 12 + filename.length * 2 + typeId.calculateSize(value)
+
     companion object {
 
         /**
@@ -64,8 +71,8 @@ data class DSStoreRecord(
             val filenameLength = stream.readInt()
             val filename = stream.readString(filenameLength * 2, StandardCharsets.UTF_16BE)
             val propertyId = stream.readFourCC()
-            val typeId = stream.readFourCC()
-            val value = DSStoreValueType.forTypeId(typeId).readValue(stream)
+            val typeId = DSStoreValueType.forTypeId(stream.readFourCC())
+            val value = typeId.readValue(stream)
             return DSStoreRecord(filename, propertyId, typeId, value)
         }
     }
