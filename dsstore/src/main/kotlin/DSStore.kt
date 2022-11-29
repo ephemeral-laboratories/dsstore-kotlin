@@ -32,26 +32,17 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
 
     private fun walk(blockNumber: Int): Sequence<DSStoreRecord> {
         return sequence {
-            println("walk($blockNumber) start")
             val block = buddyFile.readBlock(blockNumber)
-            val nodeHeader = DSStoreNodeHeader.readFrom(block)
-            if (nodeHeader.p == 0) {
-                // Node is "external" and contains just records
-                repeat(nodeHeader.count) {
-                    val record = DSStoreRecord.readFrom(block)
-                    yield(record)
-                }
+            val node = DSStoreNode.readFrom(block)
+            if (node.isExternal) {
+                yieldAll(node.records)
             } else {
-                // Node is internal and contains a mix of records and child nodes
-                repeat(nodeHeader.count) {
-                    val childNodeBlockNumber = block.readInt()
+                node.childNodeBlockNumbers.zip(node.records).forEach { (childNodeBlockNumber, record) ->
                     yieldAll(walk(childNodeBlockNumber))
-                    val record = DSStoreRecord.readFrom(block)
                     yield(record)
                 }
-                yieldAll(walk(nodeHeader.p))
+                yieldAll(walk(node.lastChildNodeBlockNumber))
             }
-            println("walk($blockNumber) stop")
         }
     }
 
@@ -69,11 +60,9 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
         // Logic in here is VERY similar to the logic in `walk` -
         // the main difference is that it skips iterating children if the value cannot be there.
         val block = buddyFile.readBlock(blockNumber)
-        val nodeHeader = DSStoreNodeHeader.readFrom(block)
-        if (nodeHeader.p == 0) {
-            // Node is "external" and contains just records
-            repeat(nodeHeader.count) {
-                val record = DSStoreRecord.readFrom(block)
+        val node = DSStoreNode.readFrom(block)
+        if (node.isExternal) {
+            node.records.forEach { record ->
                 val comp = record.compareToKey(key)
                 if (comp == 0) {
                     // record == key
@@ -87,10 +76,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
             }
             return null
         } else {
-            // Node is internal and contains a mix of records and child nodes
-            repeat(nodeHeader.count) {
-                val childNodeBlockNumber = block.readInt()
-                val record = DSStoreRecord.readFrom(block)
+            node.records.forEachIndexed { index, record ->
                 val comp = record.compareToKey(key)
                 if (comp == 0) {
                     // record == key
@@ -98,14 +84,45 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                 } else if (comp < 0) {
                     // record < key, keep looking, no need to search the child node either
                 } else {
-                    // comp > 0, record > key, search the child block and then stop looking
-                    return find(key, childNodeBlockNumber)
+                    // comp > 0, record > key, search the previous child block and then stop looking
+                    return find(key, node.childNodeBlockNumbers[index])
                 }
             }
             // If we're still going by this point we have to search the right-most node still
-            return find(key, nodeHeader.p)
+            return find(key, node.lastChildNodeBlockNumber)
         }
     }
+
+    /**
+     * Deletes a record.
+     *
+     * @param key the key for looking up the record.
+     */
+    fun delete(key: DSStoreRecordKey) {
+        // Cases:
+        //   - Record doesn't exist - nothing to do
+        //   - Record is in a leaf node
+        //     - Record should be deleted in the leaf node - may become empty!
+        //   - Record is in a branch node
+        //     - Record should be deleted in the branch node - now have to peel some record off
+        //       one of the leaves either side to put in as the dividing record
+        TODO()
+    }
+
+    /**
+     * Inserts a new record. If the record already exists, it is replaced.
+     */
+    fun insertOrReplace(record: DSStoreRecord) {
+        // Cases:
+        //   - Record doesn't exist
+        //     - New record should be inserted in a leaf node - may go over size!
+        //   - Record is in a leaf node
+        //     - Record should be replaced in the leaf node - may go over size!
+        //   - Record is in a branch node
+        //     - Record should be replaced in the branch node - even this may go over size!
+        TODO()
+    }
+
 
     private fun determineRootNodeBlockNumber(): Int {
         val headerBlockNumber = buddyFile.toc["DSDB"] ?: throw IllegalStateException("DSDB entry is missing!")
