@@ -3,7 +3,7 @@ package buddy
 /**
  * Packed block offset and size, used by [RootBlockData].
  */
-class BlockAddress(val value: Int) {
+data class BlockAddress(val value: Int) {
     /**
      * Alternative constructor to provide the value in parts.
      * Avoids doing bit maths when creating an address, and the values get checked in the process.
@@ -19,8 +19,14 @@ class BlockAddress(val value: Int) {
     /**
      * The least-significant 5 bits of the number indicate the block's size, as a power of 2 (from 2^5 to 2^31).
      */
+    val blockSizeLog2
+        get() = value and SIZE_BITS
+
+    /**
+     * The least-significant 5 bits of the number indicate the block's size, as a power of 2 (from 2^5 to 2^31).
+     */
     val blockSize
-        get() = 1 shl (value and SIZE_BITS)
+        get() = 1 shl blockSizeLog2
 
     /**
      * If the blockSize bits are masked off, the result is the starting offset of the block (keeping in mind the
@@ -47,6 +53,24 @@ class BlockAddress(val value: Int) {
             }
 
             return blockOffset or blockSizeLog2
+        }
+
+        /**
+         * Calculates the minimum size log 2 value which will fit the requested number of bytes.
+         *
+         * @param bytes the requested number of bytes.
+         * @return a valid value for size log 2 which would fit that many bytes.
+         */
+        fun calculateMinimumSizeLog2(bytes: Int): Int {
+            // for example if we have requested bytes 243, the value would be
+            // 0b00000000 00000000 00000000 11110011
+            // The value we want to use for the actual size would be the next higher power of 2.
+            // 0b00000000 00000000 00000001 00000000
+            val actualSize = bytes.takeHighestOneBit() shl 1
+            // And then the value we actually want is 8.
+            val actualSizeLog2 = actualSize.countTrailingZeroBits()
+            // But we can't support anything lower than 5.
+            return actualSizeLog2.coerceAtLeast(5)
         }
     }
 }

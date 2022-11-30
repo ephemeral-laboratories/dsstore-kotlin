@@ -1,5 +1,6 @@
 import buddy.BuddyFile
 import types.FourCC
+import util.Block
 import util.FileMode
 import java.io.Closeable
 import java.nio.file.Path
@@ -115,21 +116,58 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
      * Inserts a new record. If the record already exists, it is replaced.
      */
     fun insertOrReplace(record: DSStoreRecord) {
-        // Cases:
-        //   - Record doesn't exist
-        //     - New record should be inserted in a leaf node - may go over size!
-        //   - Record is in a leaf node
-        //     - Record should be replaced in the leaf node - may go over size!
-        //   - Record is in a branch node
-        //     - Record should be replaced in the branch node - even this may go over size!
-        TODO()
+        insertOrReplaceInner(determineRootNodeBlockNumber(), record)
     }
 
+    // TODO: Try to figure out the best way to reuse walk logic between delete, insert, find
+    private fun insertOrReplaceInner(blockNumber: Int, newRecord: DSStoreRecord): Int? {
+        val key = newRecord.extractKey()
+        val block = buddyFile.readBlock(blockNumber)
+        when (val node = DSStoreNode.readFrom(block)) {
+            is DSStoreNode.Leaf -> {
+                node.records.forEach { record ->
+                    val comp = record.compareToKey(key)
+                    if (comp == 0) {
+                        // record == key
+                        TODO("What now?")
+                    } else if (comp < 0) {
+                        // record < key, keep looking
+                    } else {
+                        // comp > 0, record > key, stop looking
+                        TODO("What now?")
+                    }
+                }
+                val newNode = node.copy(records = node.records + newRecord)
+                val newNodeBlock = Block.create(newNode.calculateSize()) { stream ->
+                    newNode.writeTo(stream)
+                }
+                val newBlockNumber = buddyFile.allocateBlock(newNodeBlock.size, blockNumber)
+                buddyFile.writeBlock(newBlockNumber, newNodeBlock)
+                return newBlockNumber
+            }
+            is DSStoreNode.Branch -> {
+                node.records.forEachIndexed { index, record ->
+                    val comp = record.compareToKey(key)
+                    if (comp == 0) {
+                        // record == key
+                        TODO("What now?")
+                    } else if (comp < 0) {
+                        // record < key, keep looking, no need to search the child node either
+                    } else {
+                        // comp > 0, record > key, search the previous child block and then stop looking
+                        TODO("What now?")
+                    }
+                }
+                // If we're still going by this point we have to search the right-most node still
+                TODO("What now?")
+            }
+        }
+    }
 
     private fun determineRootNodeBlockNumber(): Int {
-        val headerBlockNumber = buddyFile.toc["DSDB"] ?: throw IllegalStateException("DSDB entry is missing!")
-        val headerBlock = DSStoreHeaderBlock.readFrom(buddyFile.readBlock(headerBlockNumber))
-        return headerBlock.rootBlockNumber
+        val superBlockNumber = buddyFile.getTocEntry(SUPERBLOCK_KEY)
+        val superBlock = DSStoreSuperBlock.readFrom(buddyFile.readBlock(superBlockNumber))
+        return superBlock.rootBlockNumber
     }
 
     override fun close() {
@@ -137,6 +175,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
     }
 
     companion object {
+        const val SUPERBLOCK_KEY = "DSDB"
 
         /**
          * Opens a `.DS_Store` file.
@@ -146,6 +185,22 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
          */
         fun open(path: Path, fileMode: FileMode = FileMode.READ_ONLY): DSStore {
             val buddyFile = BuddyFile.open(path, fileMode)
+
+            if (!buddyFile.hasTocEntry(SUPERBLOCK_KEY) && fileMode == FileMode.READ_WRITE) {
+                val superBlockNumber = buddyFile.allocateTocEntry(SUPERBLOCK_KEY, DSStoreSuperBlock.SIZE)
+                val pageSize = 4096
+                val rootBlockNumber = buddyFile.allocateBlock(pageSize)
+
+                buddyFile.writeBlock(rootBlockNumber, Block.create(pageSize) {
+                    // will be zero filled by default, so no need to do anything
+                })
+
+                buddyFile.writeBlock(superBlockNumber, Block.create(DSStoreSuperBlock.SIZE) { stream ->
+                    val superBlock = DSStoreSuperBlock(rootBlockNumber, 0, 0, 1, pageSize)
+                    superBlock.writeTo(stream)
+                })
+            }
+
             return DSStore(buddyFile)
         }
     }

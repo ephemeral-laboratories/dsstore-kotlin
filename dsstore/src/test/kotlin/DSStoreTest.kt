@@ -5,7 +5,6 @@ import assertk.assertions.isNull
 import org.junit.jupiter.api.io.TempDir
 import types.IntPoint
 import util.FileMode
-import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
 
@@ -34,18 +33,22 @@ class DSStoreTest {
         val file = temp.resolve("my.DS_Store")
         DSStore.open(file, FileMode.READ_WRITE).use { store ->
             store.insertOrReplace(
-                DSStoreRecord("bam", DSStoreProperties.IconLocation, DSStoreValueType.BLOB, IntPoint(104, 116))
+                DSStoreRecord("bam", DSStoreProperties.IconLocation, IntPoint(104, 116))
             )
             store.insertOrReplace(
-                DSStoreRecord("bar", DSStoreProperties.IconLocation, DSStoreValueType.BLOB, IntPoint(256, 235))
+                DSStoreRecord("bar", DSStoreProperties.IconLocation, IntPoint(256, 235))
             )
             store.insertOrReplace(
-                DSStoreRecord("baz", DSStoreProperties.IconLocation, DSStoreValueType.BLOB, IntPoint(454, 124))
+                DSStoreRecord("baz", DSStoreProperties.IconLocation, IntPoint(454, 124))
             )
         }
-        val actual = Files.readAllBytes(file)
-        val expected = Files.readAllBytes(Path.of("src/test/resources/trivial.DS_Store"))
-        assertThat(actual).isEqualTo(expected)
+        // Because we can't rely on the behaviour matching wherever trivial.DS_Store came from,
+        // the best we can do is look for the same records.
+        DSStore.open(file).use { store ->
+            assertThat(store["bam", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(104, 116))
+            assertThat(store["bar", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(256, 235))
+            assertThat(store["baz", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(454, 124))
+        }
     }
 
     @Test

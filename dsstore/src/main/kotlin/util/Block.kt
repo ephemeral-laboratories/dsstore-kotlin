@@ -1,5 +1,6 @@
 package util
 
+import types.Blob
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -7,6 +8,8 @@ import java.nio.ByteOrder
  * A block of data in the file.
  */
 class Block(private val buffer: ByteBuffer) : DataInput by ByteBufferDataInput(buffer) {
+    val size get() = buffer.capacity()
+
     init {
         buffer.order(ByteOrder.BIG_ENDIAN)
     }
@@ -20,6 +23,18 @@ class Block(private val buffer: ByteBuffer) : DataInput by ByteBufferDataInput(b
      */
     fun duplicateBuffer(): ByteBuffer {
         return buffer.duplicate().position(0)
+    }
+
+    /**
+     * Convenience method to convert to a blob.
+     *
+     * @return the blob.
+     */
+    fun toBlob(): Blob {
+        val bufferCopy = duplicateBuffer()
+        val data = ByteArray(bufferCopy.remaining())
+        bufferCopy.get(data)
+        return Blob(data)
     }
 
     companion object {

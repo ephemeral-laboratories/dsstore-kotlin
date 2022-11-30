@@ -52,7 +52,7 @@ sealed class DSStoreNode {
         }
     }
 
-    class Leaf(val records: List<DSStoreRecord>) : DSStoreNode() {
+    data class Leaf(val records: List<DSStoreRecord>) : DSStoreNode() {
         override fun calculateSize(): Int {
             return 8 + records.sumOf(DSStoreRecord::calculateSize)
         }
@@ -66,7 +66,7 @@ sealed class DSStoreNode {
         }
     }
 
-    class Branch(val records: List<DSStoreRecord>, val childNodeBlockNumbers: List<Int>) : DSStoreNode() {
+    data class Branch(val records: List<DSStoreRecord>, val childNodeBlockNumbers: List<Int>) : DSStoreNode() {
         override fun calculateSize(): Int {
             return 8 + records.sumOf(DSStoreRecord::calculateSize) + childNodeBlockNumbers.size * 4
         }

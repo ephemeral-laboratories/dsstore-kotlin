@@ -1,6 +1,8 @@
+
 import codecs.PropertyCodecs
 import types.Blob
 import types.FourCC
+import util.Block
 import util.DataInput
 import util.DataOutput
 import java.nio.charset.StandardCharsets
@@ -21,6 +23,19 @@ data class DSStoreRecord(
     val typeId: DSStoreValueType,
     val value: Any,
 ) {
+    constructor(filename: String, propertyId: FourCC, value: Any) :
+            this(filename, propertyId, encodeValue(propertyId, value))
+
+    constructor(filename: String, propertyId: FourCC, encodedValue: Pair<DSStoreValueType, Any>) :
+            this(filename, propertyId, encodedValue.first, encodedValue.second)
+
+    /**
+     * Extracts just the key from the record.
+     *
+     * @return the key.
+     */
+    fun extractKey() = DSStoreRecordKey(filename, propertyId)
+
     /**
      * Compares the record against a key.
      *
@@ -73,7 +88,27 @@ data class DSStoreRecord(
         typeId.writeValue(value, stream)
     }
 
+
     companion object {
+        private fun encodeValue(propertyId: FourCC, value: Any): Pair<DSStoreValueType, Any> {
+            // If the value is any of the built-in types, just leave it as-is.
+            // This includes blobs provided as Blob.
+            val typeId = DSStoreValueType.findForValue(value)
+            if (typeId != null) {
+                return Pair(typeId, value)
+            }
+
+            // For everything else, look up a codec
+            val codec = PropertyCodecs.findCodec(propertyId)
+                ?: throw IllegalArgumentException("No codec for value: $value")
+
+            return Pair(
+                DSStoreValueType.BLOB,
+                Block.create(codec.calculateSize(value)) { stream ->
+                    codec.encode(value, stream)
+                }.toBlob()
+            )
+        }
 
         /**
          * Reads the record from a stream.

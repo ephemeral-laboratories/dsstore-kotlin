@@ -28,7 +28,7 @@ class Blob(data: ByteArray) {
     fun toByteArray() = data.copyOf()
 
     override fun equals(other: Any?): Boolean {
-        if (other == this) return true
+        if (other === this) return true
         if (other !is Blob) return false
         return data.contentEquals(other.data)
     }

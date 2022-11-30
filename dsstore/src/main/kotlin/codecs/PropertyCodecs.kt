@@ -18,8 +18,10 @@ class PropertyCodecs {
          * @param propertyId the property ID to look up. See [DSStoreProperties] for values.
          * @return the codec, if found, or `null` if none was found.
          */
-        fun findCodec(propertyId: FourCC): Codec<out Any>? {
-            return codecMap[propertyId]
+        fun findCodec(propertyId: FourCC): Codec<Any>? {
+            // Hard-to-avoid situation because we want to be able to use arbitrary types for in _and_ out.
+            @Suppress("UNCHECKED_CAST")
+            return codecMap[propertyId] as Codec<Any>?
         }
     }
 }

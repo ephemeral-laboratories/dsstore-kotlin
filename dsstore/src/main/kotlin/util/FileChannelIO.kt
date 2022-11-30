@@ -26,7 +26,7 @@ class FileChannelIO(private val channel: FileChannel) : Closeable {
                 break
             }
         }
-        buffer.flip()
+        buffer.rewind()
         return Block(buffer)
     }
 

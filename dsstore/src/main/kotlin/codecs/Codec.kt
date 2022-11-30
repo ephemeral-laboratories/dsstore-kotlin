@@ -1,6 +1,7 @@
 package codecs
 
 import util.DataInput
+import util.DataOutput
 
 /**
  * Abstraction of a codec for encoding and decoding blobs for specific properties.
@@ -15,6 +16,19 @@ interface Codec<T> {
      */
     fun decode(stream: DataInput): T
 
-// Later, when we add write support:
-//    fun encode(value: T, stream: DataOutput)
+    /**
+     * Calculates the size required to store the value.
+     *
+     * @param value the value.
+     * @return the size of the value, in bytes.
+     */
+    fun calculateSize(value: T): Int
+
+    /**
+     * Encodes the property value.
+     *
+     * @param value the value.
+     * @param stream a stream opened for writing the new value.
+     */
+    fun encode(value: T, stream: DataOutput)
 }

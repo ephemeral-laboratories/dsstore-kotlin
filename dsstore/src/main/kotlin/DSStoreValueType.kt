@@ -166,5 +166,25 @@ enum class DSStoreValueType(val typeId: FourCC) {
         fun forTypeId(typeId: FourCC): DSStoreValueType {
             return byTypeId[typeId] ?: throw IllegalArgumentException("Unknown type ID: $typeId")
         }
+
+        /**
+         * Tries to find a type which can be used for the given value.
+         *
+         * @param value the value.
+         * @return the value type, or `null` if none matched.
+         */
+        fun findForValue(value: Any): DSStoreValueType? {
+            return when (value) {
+                is Int -> INT
+                is Short -> SHORT
+                is Boolean -> BOOL
+                is FourCC -> TYPE
+                is Blob -> BLOB
+                is String -> UNICODE_STRING
+                is Long -> LONG
+                is Instant -> DATE_UTC
+                else -> null
+            }
+        }
     }
 }
