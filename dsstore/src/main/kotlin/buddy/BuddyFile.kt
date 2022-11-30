@@ -146,11 +146,12 @@ class BuddyFile(private val stream: FileChannelIO) : Closeable {
             val (buddyOffset, buddyIndexInFreeList) = findNeighbour(newFreeLists, offset, width)
                 ?: break
 
+            val newFreeList = newFreeLists[width].toMutableList()
+            newFreeList.removeAt(buddyIndexInFreeList)
+            newFreeLists[width] = newFreeList
+
             offset = offset and buddyOffset
             width++
-            val newFreeList = newFreeLists[width].toMutableList()
-            newFreeLists[width] = newFreeList
-            newFreeList.removeAt(buddyIndexInFreeList)
         }
 
         val newFreeList = newFreeLists[width].toMutableList()
