@@ -6,7 +6,9 @@ import java.nio.ByteBuffer
 /**
  * An immutable byte array.
  */
-class Blob(private val data: ByteArray) {
+class Blob(data: ByteArray) {
+    private val data = data.copyOf()
+
     val size get() = data.size
 
     /**
@@ -17,6 +19,13 @@ class Blob(private val data: ByteArray) {
     fun toBlock(): Block {
         return Block(ByteBuffer.wrap(data))
     }
+
+    /**
+     * Converts to a byte array. Does so by copying the array.
+     *
+     * @return the byte array.
+     */
+    fun toByteArray() = data.copyOf()
 
     override fun equals(other: Any?): Boolean {
         if (other == this) return true

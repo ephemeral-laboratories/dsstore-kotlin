@@ -3,6 +3,7 @@ package buddy
 import types.Blob
 import types.FourCC
 import util.DataInput
+import util.DataOutput
 
 /**
  * Structure at the start of the buddy allocation file.
@@ -29,8 +30,22 @@ data class BuddyHeader(
         }
     }
 
+    /**
+     * Writes the buddy header to a stream.
+     *
+     * @param stream the stream to write to.
+     */
+    fun writeTo(stream: DataOutput) {
+        stream.writeFourCC(magic)
+        stream.writeInt(rootBlockOffset)
+        stream.writeInt(rootBlockSize)
+        stream.writeInt(rootBlockOffset2)
+        stream.writeBlob(unknown16)
+    }
+
     companion object {
-        private val MAGIC = FourCC("Bud1")
+        const val SIZE = 32
+        val MAGIC = FourCC("Bud1")
 
         /**
          * Reads the buddy header from a stream.

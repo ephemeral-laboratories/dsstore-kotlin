@@ -1,4 +1,5 @@
 import util.DataInput
+import util.DataOutput
 
 /**
  * Represents a single node in the tree.
@@ -10,6 +11,13 @@ sealed class DSStoreNode {
      * @return the size of the node, in bytes.
      */
     abstract fun calculateSize(): Int
+
+    /**
+     * Writes the node to a stream.
+     *
+     * @param stream the stream to write to.
+     */
+    abstract fun writeTo(stream: DataOutput)
 
     companion object {
 
@@ -48,11 +56,28 @@ sealed class DSStoreNode {
         override fun calculateSize(): Int {
             return 8 + records.sumOf(DSStoreRecord::calculateSize)
         }
+
+        override fun writeTo(stream: DataOutput) {
+            stream.writeInt(0)
+            stream.writeInt(records.size)
+            records.forEach { record ->
+                record.writeTo(stream)
+            }
+        }
     }
 
     class Branch(val records: List<DSStoreRecord>, val childNodeBlockNumbers: List<Int>) : DSStoreNode() {
         override fun calculateSize(): Int {
             return 8 + records.sumOf(DSStoreRecord::calculateSize) + childNodeBlockNumbers.size * 4
+        }
+
+        override fun writeTo(stream: DataOutput) {
+            stream.writeInt(childNodeBlockNumbers.last())
+            stream.writeInt(records.size)
+            childNodeBlockNumbers.zip(records).forEach { (childNodeBlockNumber, record) ->
+                stream.writeInt(childNodeBlockNumber)
+                record.writeTo(stream)
+            }
         }
     }
 }

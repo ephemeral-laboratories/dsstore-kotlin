@@ -1,66 +1,40 @@
 package util
 
-import types.Blob
-import types.FourCC
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
 
 /**
  * A block of data in the file.
  */
-class Block(private val buffer: ByteBuffer) : DataInput {
+class Block(private val buffer: ByteBuffer) : DataInput by ByteBufferDataInput(buffer) {
     init {
         buffer.order(ByteOrder.BIG_ENDIAN)
     }
 
-    override fun skip(byteCount: Int) {
-        requireAvailable(byteCount)
-        buffer.position(buffer.position() + byteCount)
+    /**
+     * Duplicates the buffer so the caller can read it directly
+     * without upsetting the internal state.
+     * Also resets the position of the buffer.
+     *
+     * @return the buffer.
+     */
+    fun duplicateBuffer(): ByteBuffer {
+        return buffer.duplicate().position(0)
     }
 
-    override fun readByte(): Byte {
-        requireAvailable(1)
-        return buffer.get()
-    }
-
-    override fun readInt(): Int {
-        requireAvailable(4)
-        return buffer.int
-    }
-
-    override fun readLong(): Long {
-        requireAvailable(8)
-        return buffer.long
-    }
-
-    override fun readLongLE(): Long {
-        requireAvailable(8)
-        return buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).long
-    }
-    override fun readFourCC(): FourCC {
-        return FourCC(readArray(4).toString(StandardCharsets.US_ASCII))
-    }
-
-    override fun readBlob(lengthBytes: Int): Blob {
-        return Blob(readArray(lengthBytes))
-    }
-
-    override fun readString(lengthBytes: Int, charset: Charset): String {
-        return readArray(lengthBytes).toString(charset)
-    }
-
-    private fun readArray(lengthBytes: Int): ByteArray {
-        requireAvailable(lengthBytes)
-        val array = ByteArray(lengthBytes)
-        buffer.get(array)
-        return array
-    }
-
-    private fun requireAvailable(byteCount: Int) {
-        require(byteCount <= buffer.remaining()) {
-            "Requested byte count $byteCount exceeds remaining bytes ${buffer.remaining()}"
+    companion object {
+        /**
+         * Creates a new block by allocating a buffer and writing provided data into it.
+         *
+         * @param size the size to allocate for the buffer.
+         * @param writeLogic a callback called to write the data.
+         * @return the block.
+         */
+        fun create(size: Int, writeLogic: (DataOutput) -> Unit): Block {
+            val buffer = ByteBuffer.allocate(size)
+            writeLogic(ByteBufferDataOutput(buffer))
+            buffer.flip()
+            return Block(buffer)
         }
     }
 }

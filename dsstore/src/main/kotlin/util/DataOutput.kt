@@ -10,6 +10,13 @@ import java.nio.charset.Charset
 interface DataOutput {
 
     /**
+     * Skips the given number of bytes.
+     *
+     * @param byteCount the number of bytes to skip.
+     */
+    fun skip(byteCount: Int)
+
+    /**
      * Writes a single byte.
      *
      * @param value the byte.

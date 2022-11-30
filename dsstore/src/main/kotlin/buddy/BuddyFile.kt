@@ -1,5 +1,6 @@
 package buddy
 
+import types.Blob
 import util.Block
 import util.FileChannelIO
 import util.FileMode
@@ -57,7 +58,64 @@ class BuddyFile(private val stream: FileChannelIO) : Closeable {
          * @param fileMode the mode to open the file in.
          */
         fun open(path: Path, fileMode: FileMode): BuddyFile {
-            return BuddyFile(FileChannelIO.open(path, fileMode))
+            var success = false
+            val channel = FileChannelIO.open(path, fileMode)
+            try {
+                if (channel.isEmpty && fileMode == FileMode.READ_WRITE) {
+                    writeInitialEmptyFile(channel)
+                }
+
+                val result = BuddyFile(channel)
+                success = true
+                return result
+            } finally {
+                if (!success) {
+                    channel.close()
+                }
+            }
+        }
+
+        // We have no idea what this means, but it was present in another file.
+        private val UNKNOWN16_PLACEHOLDER = byteArrayOf(
+            0, 0, 0x10, 0x0c,
+            0, 0, 0, 0x87.toByte(),
+            0, 0, 0x20, 0xb,
+            0, 0, 0, 0
+        )
+
+        private fun writeInitialEmptyFile(channel: FileChannelIO) {
+            channel.writeBlock(0, Block.create(2048) { stream ->
+                stream.writeInt(FILE_MAGIC)
+                val header = BuddyHeader(BuddyHeader.MAGIC, 2048, 1264, 2048, Blob(UNKNOWN16_PLACEHOLDER))
+                header.writeTo(stream)
+            })
+
+            val rootBlockOffset = 2048
+
+            val rootBlockData = RootBlockData(
+                // XXX: Could build this address from its parts, requires understanding the value
+                listOf(BlockAddress(rootBlockOffset, 5)),
+                mapOf(),
+                buildList {
+                    for (n in 0..4) {
+                        add(listOf())
+                    }
+                    for (n in 5..10) {
+                        add(listOf(1 shl n))
+                    }
+                    add(listOf())
+                    for (n in 12..30) {
+                        add(listOf(1 shl n))
+                    }
+                    add(listOf())
+                }
+            )
+
+            channel.writeBlock(rootBlockOffset + 4L, Block.create(rootBlockData.calculateSize()) { stream ->
+                rootBlockData.writeTo(stream)
+            })
+
+            channel.flush()
         }
     }
 }

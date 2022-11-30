@@ -2,6 +2,7 @@ import codecs.PropertyCodecs
 import types.Blob
 import types.FourCC
 import util.DataInput
+import util.DataOutput
 import java.nio.charset.StandardCharsets
 
 /**
@@ -58,6 +59,19 @@ data class DSStoreRecord(
      * @return the size of this record in bytes.
      */
     fun calculateSize() = 12 + filename.length * 2 + typeId.calculateSize(value)
+
+    /**
+     * Writes the record to a stream.
+     *
+     * @param stream the stream to write to.
+     */
+    fun writeTo(stream: DataOutput) {
+        stream.writeInt(filename.length)
+        stream.writeString(filename, StandardCharsets.UTF_16BE)
+        stream.writeFourCC(propertyId)
+        stream.writeFourCC(typeId.typeId)
+        typeId.writeValue(value, stream)
+    }
 
     companion object {
 

@@ -1,6 +1,7 @@
 package buddy
 
 import util.DataInput
+import util.DataOutput
 import java.nio.charset.StandardCharsets
 
 /**
@@ -16,6 +17,65 @@ data class RootBlockData(
     val tocEntries: Map<String, Int>,
     val freeLists: List<List<Int>>,
 ) {
+    /**
+     * Calculates the space required to store this structure.
+     *
+     * @return the size of the data, in bytes.
+     */
+    fun calculateSize(): Int {
+        var size = 4 + 4 + blockAddresses.size * 4
+
+        // Pad to 256-entry (1024-byte) boundary
+        val extra = blockAddresses.size % 256
+        if (extra != 0) {
+            size += (256 - extra) * 4
+        }
+
+        size += 4
+        tocEntries.forEach { tocEntry ->
+            size += 5 + tocEntry.key.length
+        }
+
+        freeLists.forEach { freeList ->
+            size += 4 + freeList.size * 4
+        }
+
+        return size
+    }
+
+    /**
+     * Writes the root block data to a stream.
+     *
+     * @param stream the stream to write to.
+     */
+    fun writeTo(stream: DataOutput) {
+        stream.writeInt(blockAddresses.size)
+
+        // The 4 bytes we skipped originally
+        stream.skip(4)
+
+        blockAddresses.forEach { address ->
+            stream.writeInt(address?.value ?: 0)
+        }
+
+        // Pad to 256-entry (1024-byte) boundary
+        val extra = blockAddresses.size % 256
+        if (extra != 0) {
+            stream.skip((256 - extra) * 4)
+        }
+
+        stream.writeInt(tocEntries.size)
+        tocEntries.forEach { tocEntry ->
+            stream.writeByte(tocEntry.key.length.toByte())
+            stream.writeString(tocEntry.key, StandardCharsets.US_ASCII)
+            stream.writeInt(tocEntry.value)
+        }
+
+        freeLists.forEach { freeList ->
+            stream.writeInt(freeList.size)
+            freeList.forEach(stream::writeInt)
+        }
+    }
 
     companion object {
 
