@@ -130,25 +130,16 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                     val comp = record.compareToKey(key)
                     if (comp == 0) {
                         // record == key
-                        TODO("What now?")
+                        return updateLeafNode(node, blockNumber) { it[index] = newRecord }
                     } else if (comp < 0) {
                         // record < key, keep looking
                     } else {
                         // comp > 0, record > key, stop looking, current index is the insertion point
-                        val newRecords = node.records.toMutableList()
-                        newRecords.add(index, newRecord)
-                        val newNode = node.copy(records = newRecords)
-                        val newNodeBlock = Block.create(newNode.calculateSize()) { stream -> newNode.writeTo(stream) }
-                        val newBlockNumber = buddyFile.allocateBlock(newNodeBlock.size, blockNumber)
-                        buddyFile.writeBlock(newBlockNumber, newNodeBlock)
-                        return newBlockNumber
+                        return updateLeafNode(node, blockNumber) { it.add(index, newRecord) }
                     }
                 }
-                val newNode = node.copy(records = node.records + newRecord)
-                val newNodeBlock = Block.create(newNode.calculateSize()) { stream -> newNode.writeTo(stream) }
-                val newBlockNumber = buddyFile.allocateBlock(newNodeBlock.size, blockNumber)
-                buddyFile.writeBlock(newBlockNumber, newNodeBlock)
-                return newBlockNumber
+                // insertion point is at the end
+                return updateLeafNode(node, blockNumber) { it.add(newRecord) }
             }
 
             is DSStoreNode.Branch -> {
@@ -168,6 +159,20 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                 TODO("What now?")
             }
         }
+    }
+
+    private fun updateLeafNode(
+        node: DSStoreNode.Leaf,
+        existingBlockNumber: Int,
+        recordsMutator: (records: MutableList<DSStoreRecord>) -> Unit
+    ): Int {
+        val newRecords = node.records.toMutableList()
+        recordsMutator(newRecords)
+        val newNode = node.copy(records = newRecords)
+        val newNodeBlock = Block.create(newNode.calculateSize()) { stream -> newNode.writeTo(stream) }
+        val newBlockNumber = buddyFile.allocateBlock(newNodeBlock.size, existingBlockNumber)
+        buddyFile.writeBlock(newBlockNumber, newNodeBlock)
+        return newBlockNumber
     }
 
     private fun determineRootNodeBlockNumber(): Int {
