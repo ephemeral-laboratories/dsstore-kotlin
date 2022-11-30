@@ -77,6 +77,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                 }
                 return null
             }
+
             is DSStoreNode.Branch -> {
                 node.records.forEachIndexed { index, record ->
                     val comp = record.compareToKey(key)
@@ -125,7 +126,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
         val block = buddyFile.readBlock(blockNumber)
         when (val node = DSStoreNode.readFrom(block)) {
             is DSStoreNode.Leaf -> {
-                node.records.forEach { record ->
+                node.records.forEachIndexed { index, record ->
                     val comp = record.compareToKey(key)
                     if (comp == 0) {
                         // record == key
@@ -133,18 +134,23 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                     } else if (comp < 0) {
                         // record < key, keep looking
                     } else {
-                        // comp > 0, record > key, stop looking
-                        TODO("What now?")
+                        // comp > 0, record > key, stop looking, current index is the insertion point
+                        val newRecords = node.records.toMutableList()
+                        newRecords.add(index, newRecord)
+                        val newNode = node.copy(records = newRecords)
+                        val newNodeBlock = Block.create(newNode.calculateSize()) { stream -> newNode.writeTo(stream) }
+                        val newBlockNumber = buddyFile.allocateBlock(newNodeBlock.size, blockNumber)
+                        buddyFile.writeBlock(newBlockNumber, newNodeBlock)
+                        return newBlockNumber
                     }
                 }
                 val newNode = node.copy(records = node.records + newRecord)
-                val newNodeBlock = Block.create(newNode.calculateSize()) { stream ->
-                    newNode.writeTo(stream)
-                }
+                val newNodeBlock = Block.create(newNode.calculateSize()) { stream -> newNode.writeTo(stream) }
                 val newBlockNumber = buddyFile.allocateBlock(newNodeBlock.size, blockNumber)
                 buddyFile.writeBlock(newBlockNumber, newNodeBlock)
                 return newBlockNumber
             }
+
             is DSStoreNode.Branch -> {
                 node.records.forEachIndexed { index, record ->
                     val comp = record.compareToKey(key)
