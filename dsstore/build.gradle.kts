@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm") version "1.7.20"
 }
 
-version = "dsstore"
+version = "0.1-SNAPSHOT"
 
 repositories {
     mavenCentral()
