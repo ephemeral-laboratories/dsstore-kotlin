@@ -9,6 +9,12 @@ import java.nio.file.Path
  * Top-level class representing the `.DS_Store` file.
  */
 class DSStore(private val buddyFile: BuddyFile) : Closeable {
+    private val superBlock: DSStoreSuperBlock
+
+    init {
+        val superBlockNumber = buddyFile.getTocEntry(SUPERBLOCK_KEY)
+        superBlock = DSStoreSuperBlock.readFrom(buddyFile.readBlock(superBlockNumber))
+    }
 
     /**
      * Support method for convenient indexing.
@@ -28,7 +34,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
      * @return the sequence.
      */
     fun walk(): Sequence<DSStoreRecord> {
-        return walk(determineRootNodeBlockNumber())
+        return walk(superBlock.rootBlockNumber)
     }
 
     private fun walk(blockNumber: Int): Sequence<DSStoreRecord> {
@@ -54,7 +60,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
      * @return the found record, or `null` if not found.
      */
     fun find(key: DSStoreRecordKey): DSStoreRecord? {
-        return find(key, determineRootNodeBlockNumber())
+        return find(key, superBlock.rootBlockNumber)
     }
 
     private fun find(key: DSStoreRecordKey, blockNumber: Int): DSStoreRecord? {
@@ -117,7 +123,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
      * Inserts a new record. If the record already exists, it is replaced.
      */
     fun insertOrReplace(record: DSStoreRecord) {
-        insertOrReplaceInner(determineRootNodeBlockNumber(), record)
+        insertOrReplaceInner(superBlock.rootBlockNumber, record)
     }
 
     // TODO: Try to figure out the best way to reuse walk logic between delete, insert, find
@@ -169,16 +175,14 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
         val newRecords = node.records.toMutableList()
         recordsMutator(newRecords)
         val newNode = node.copy(records = newRecords)
-        val newNodeBlock = Block.create(newNode.calculateSize()) { stream -> newNode.writeTo(stream) }
+        val newNodeSize = newNode.calculateSize()
+        if (newNodeSize > superBlock.pageSize) {
+            TODO("Node size would exceed page size, splitting nodes is not yet implemented")
+        }
+        val newNodeBlock = Block.create(newNodeSize) { stream -> newNode.writeTo(stream) }
         val newBlockNumber = buddyFile.allocateBlock(newNodeBlock.size, existingBlockNumber)
         buddyFile.writeBlock(newBlockNumber, newNodeBlock)
         return newBlockNumber
-    }
-
-    private fun determineRootNodeBlockNumber(): Int {
-        val superBlockNumber = buddyFile.getTocEntry(SUPERBLOCK_KEY)
-        val superBlock = DSStoreSuperBlock.readFrom(buddyFile.readBlock(superBlockNumber))
-        return superBlock.rootBlockNumber
     }
 
     override fun close() {
