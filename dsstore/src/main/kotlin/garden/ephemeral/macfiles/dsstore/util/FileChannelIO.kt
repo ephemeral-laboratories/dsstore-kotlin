@@ -1,5 +1,6 @@
 package garden.ephemeral.macfiles.dsstore.util
 
+import garden.ephemeral.macfiles.common.io.Block
 import java.io.Closeable
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel

@@ -1,7 +1,7 @@
-package garden.ephemeral.macfiles.dsstore.util
+package garden.ephemeral.macfiles.common.io
 
-import garden.ephemeral.macfiles.dsstore.types.Blob
-import garden.ephemeral.macfiles.dsstore.types.FourCC
+import garden.ephemeral.macfiles.common.types.Blob
+import garden.ephemeral.macfiles.common.types.FourCC
 import java.nio.charset.Charset
 
 /**
@@ -22,6 +22,13 @@ interface DataInput {
      * @return the byte.
      */
     fun readByte(): Byte
+
+    /**
+     * Reads a 2-byte big endian integer.
+     *
+     * @return the short.
+     */
+    fun readShort(): Short
 
     /**
      * Reads a 4-byte big endian integer.
@@ -67,4 +74,14 @@ interface DataInput {
      * @return the string.
      */
     fun readString(lengthBytes: Int, charset: Charset): String
+
+    /**
+     * Reads a "Pascal string". The fixed number of bytes are read, and
+     * then the first byte is used as the length of the actual string to return.
+     *
+     * @param lengthBytes the length to read, in bytes.
+     * @param charset the charset to use to decode the string.
+     * @return the string.
+     */
+    fun readPascalString(lengthBytes: Int, charset: Charset): String
 }

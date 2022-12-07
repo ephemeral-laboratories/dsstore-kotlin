@@ -1,6 +1,6 @@
-package garden.ephemeral.macfiles.dsstore.types
+package garden.ephemeral.macfiles.common.types
 
-import garden.ephemeral.macfiles.dsstore.util.Block
+import garden.ephemeral.macfiles.common.io.Block
 import java.nio.ByteBuffer
 
 /**

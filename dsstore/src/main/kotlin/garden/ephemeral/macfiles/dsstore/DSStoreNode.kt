@@ -1,7 +1,7 @@
 package garden.ephemeral.macfiles.dsstore
 
-import garden.ephemeral.macfiles.dsstore.util.DataInput
-import garden.ephemeral.macfiles.dsstore.util.DataOutput
+import garden.ephemeral.macfiles.common.io.DataInput
+import garden.ephemeral.macfiles.common.io.DataOutput
 
 /**
  * Represents a single node in the tree.
@@ -66,9 +66,28 @@ sealed class DSStoreNode {
                 record.writeTo(stream)
             }
         }
+
+        fun withRecordReplacedAt(index: Int, newRecord: DSStoreRecord): Leaf {
+            val recordsCopy = records.toMutableList()
+            recordsCopy[index] = newRecord
+            return copy(records = recordsCopy.toList())
+        }
+
+        fun withRecordInsertedAt(index: Int, newRecord: DSStoreRecord): Leaf {
+            val recordsCopy = records.toMutableList()
+            recordsCopy.add(index, newRecord)
+            return copy(records = recordsCopy.toList())
+        }
     }
 
     data class Branch(val records: List<DSStoreRecord>, val childNodeBlockNumbers: List<Int>) : DSStoreNode() {
+        init {
+            require(records.size == childNodeBlockNumbers.size - 1) {
+                "childNodeBlockNumbers size (${childNodeBlockNumbers.size}) " +
+                        "must be one greater than records size (${records.size})"
+            }
+        }
+
         override fun calculateSize(): Int {
             return 8 + records.sumOf(DSStoreRecord::calculateSize) + childNodeBlockNumbers.size * 4
         }
@@ -80,6 +99,12 @@ sealed class DSStoreNode {
                 stream.writeInt(childNodeBlockNumber)
                 record.writeTo(stream)
             }
+        }
+
+        fun withRecordReplacedAt(index: Int, newRecord: DSStoreRecord): Branch {
+            val recordsCopy = records.toMutableList()
+            recordsCopy[index] = newRecord
+            return copy(records = recordsCopy.toList())
         }
     }
 }

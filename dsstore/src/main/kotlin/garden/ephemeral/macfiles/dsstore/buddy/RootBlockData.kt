@@ -1,7 +1,7 @@
 package garden.ephemeral.macfiles.dsstore.buddy
 
-import garden.ephemeral.macfiles.dsstore.util.DataInput
-import garden.ephemeral.macfiles.dsstore.util.DataOutput
+import garden.ephemeral.macfiles.common.io.DataInput
+import garden.ephemeral.macfiles.common.io.DataOutput
 import java.nio.charset.StandardCharsets
 
 /**

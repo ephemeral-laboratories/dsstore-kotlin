@@ -1,7 +1,7 @@
 package garden.ephemeral.macfiles.dsstore.buddy
 
-import garden.ephemeral.macfiles.dsstore.types.Blob
-import garden.ephemeral.macfiles.dsstore.util.Block
+import garden.ephemeral.macfiles.common.io.Block
+import garden.ephemeral.macfiles.common.types.Blob
 import garden.ephemeral.macfiles.dsstore.util.FileChannelIO
 import garden.ephemeral.macfiles.dsstore.util.FileMode
 import java.io.Closeable
@@ -66,38 +66,35 @@ class BuddyFile(private val stream: FileChannelIO) : Closeable {
     }
 
     /**
-     * Allocates or reallocates a block.
+     * Convenience method to write a block into a newly-allocated block
+     * of an appropriate size.
      *
-     * @param bytes the size of the block.
-     * @param blockIn (optional) the number of an existing block to reallocate.
+     * @param block the block to write.
      * @return the allocated block number.
      */
-    fun allocateBlock(bytes: Int, blockIn: Int? = null): Int {
+    fun allocateAndWriteBlock(block: Block): Int {
+        val newBlockNumber = allocateBlock(block.size)
+        writeBlock(newBlockNumber, block)
+        return newBlockNumber
+    }
+
+    /**
+     * Allocates a block.
+     *
+     * @param bytes the size of the block.
+     * @return the allocated block number.
+     */
+    fun allocateBlock(bytes: Int): Int {
         val newBlockAddresses = rootBlockData.blockAddresses.toMutableList()
 
-        var block = blockIn
-        if (block == null) {
-            // Finding first unused block number
-            block = newBlockAddresses.indexOf(null)
-            if (block < 0) {
-                block = newBlockAddresses.size
-                newBlockAddresses.add(null)
-            }
+        // Finding first unused block number
+        var block = newBlockAddresses.indexOf(null)
+        if (block < 0) {
+            block = newBlockAddresses.size
+            newBlockAddresses.add(null)
         }
 
         val minimumSizeLog2 = BlockAddress.calculateMinimumSizeLog2(bytes)
-        val blockAddress = newBlockAddresses[block]
-
-        if (blockAddress != null) {
-            val existingBlockSizeLog2 = blockAddress.blockSizeLog2
-            if (existingBlockSizeLog2 == minimumSizeLog2) {
-                // Block is already the right size
-                return block
-            }
-
-            releaseInner(blockAddress)
-            newBlockAddresses[block] = null
-        }
 
         newBlockAddresses[block] = allocInner(minimumSizeLog2)
 
@@ -132,6 +129,19 @@ class BuddyFile(private val stream: FileChannelIO) : Closeable {
         updateRootBlockData { r -> r.copy(freeLists = newFreeLists) }
 
         return BlockAddress(allocatedOffset, requestedSizeLog2)
+    }
+
+    fun releaseBlock(blockNumber: Int) {
+        val address = getBlockAddress(blockNumber)
+        releaseInner(address)
+
+        val newBlockAddresses = rootBlockData.blockAddresses.toMutableList()
+        newBlockAddresses[blockNumber] = null
+        while (newBlockAddresses.isNotEmpty() && newBlockAddresses.last() == null) {
+            newBlockAddresses.removeLast()
+        }
+
+        updateRootBlockData { r -> r.copy(blockAddresses = newBlockAddresses) }
     }
 
     private fun releaseInner(address: BlockAddress) {

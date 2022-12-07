@@ -1,5 +1,5 @@
 package garden.ephemeral.macfiles.dsstore
-import garden.ephemeral.macfiles.dsstore.types.FourCC
+import garden.ephemeral.macfiles.common.types.FourCC
 
 /**
  * The parts of a [DSStoreRecord] which make up the unique key.

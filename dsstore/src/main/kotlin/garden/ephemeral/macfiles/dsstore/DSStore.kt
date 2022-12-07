@@ -1,8 +1,8 @@
 package garden.ephemeral.macfiles.dsstore
 
+import garden.ephemeral.macfiles.common.io.Block
+import garden.ephemeral.macfiles.common.types.FourCC
 import garden.ephemeral.macfiles.dsstore.buddy.BuddyFile
-import garden.ephemeral.macfiles.dsstore.types.FourCC
-import garden.ephemeral.macfiles.dsstore.util.Block
 import garden.ephemeral.macfiles.dsstore.util.FileMode
 import java.io.Closeable
 import java.nio.file.Path
@@ -11,14 +11,10 @@ import java.nio.file.Path
  * Top-level class representing the `.DS_Store` file.
  */
 class DSStore(private val buddyFile: BuddyFile) : Closeable {
-    private val superBlock: DSStoreSuperBlock
-
-    init {
-        val superBlockNumber = buddyFile.getTocEntry(SUPERBLOCK_KEY)
-        superBlock = DSStoreSuperBlock.readFrom(
-            buddyFile.readBlock(superBlockNumber)
-        )
-    }
+    private val superBlockNumber = buddyFile.getTocEntry(SUPERBLOCK_KEY)
+    private var superBlock = DSStoreSuperBlock.readFrom(
+        buddyFile.readBlock(superBlockNumber)
+    )
 
     /**
      * Support method for convenient indexing.
@@ -125,13 +121,22 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
 
     /**
      * Inserts a new record. If the record already exists, it is replaced.
+     *
+     * @param record the new record.
      */
     fun insertOrReplace(record: DSStoreRecord) {
-        insertOrReplaceInner(superBlock.rootBlockNumber, record)
+        val defunctBlocks = mutableListOf<Int>()
+        val newRootBlockNumber = insertOrReplaceInner(superBlock.rootBlockNumber, record, defunctBlocks)
+        updateSuperBlock { s -> s.copy(rootBlockNumber = newRootBlockNumber) }
+        defunctBlocks.forEach(buddyFile::releaseBlock)
     }
 
     // TODO: Try to figure out the best way to reuse walk logic between delete, insert, find
-    private fun insertOrReplaceInner(blockNumber: Int, newRecord: DSStoreRecord): Int? {
+    private fun insertOrReplaceInner(
+        blockNumber: Int,
+        newRecord: DSStoreRecord,
+        defunctBlocks: MutableList<Int>
+    ): Int {
         val key = newRecord.extractKey()
         val block = buddyFile.readBlock(blockNumber)
         when (val node = DSStoreNode.readFrom(block)) {
@@ -140,16 +145,19 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                     val comp = record.compareToKey(key)
                     if (comp == 0) {
                         // record == key
-                        return updateLeafNode(node, blockNumber) { it[index] = newRecord }
+                        val newNode = node.withRecordReplacedAt(index, newRecord)
+                        return updateNode(newNode, blockNumber, defunctBlocks)
                     } else if (comp < 0) {
                         // record < key, keep looking
                     } else {
                         // comp > 0, record > key, stop looking, current index is the insertion point
-                        return updateLeafNode(node, blockNumber) { it.add(index, newRecord) }
+                        val newNode = node.withRecordInsertedAt(index, newRecord)
+                        return updateNode(newNode, blockNumber, defunctBlocks)
                     }
                 }
                 // insertion point is at the end
-                return updateLeafNode(node, blockNumber) { it.add(newRecord) }
+                val newNode = node.withRecordInsertedAt(node.records.size, newRecord)
+                return updateNode(newNode, blockNumber, defunctBlocks)
             }
 
             is DSStoreNode.Branch -> {
@@ -158,35 +166,42 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                     if (comp == 0) {
                         // record == key
                         TODO("What now?")
+                        // This might work, needs a test case
+                        // return updateBranchNode(node, blockNumber) { it.withRecordReplacedAt(index, newRecord) }
                     } else if (comp < 0) {
                         // record < key, keep looking, no need to search the child node either
                     } else {
                         // comp > 0, record > key, search the previous child block and then stop looking
                         TODO("What now?")
+                        // Beware - if it results in writing a new node, we have to update the current node!
+                        // return insertOrReplaceInner(node.childNodeBlockNumbers[index], newRecord)
                     }
                 }
                 // If we're still going by this point we have to search the right-most node still
                 TODO("What now?")
+                // Beware - if it results in writing a new node, we have to update the current node!
+                // return insertOrReplaceInner(node.childNodeBlockNumbers.last(), newRecord)
             }
         }
     }
 
-    private fun updateLeafNode(
-        node: DSStoreNode.Leaf,
-        existingBlockNumber: Int,
-        recordsMutator: (records: MutableList<DSStoreRecord>) -> Unit
-    ): Int {
-        val newRecords = node.records.toMutableList()
-        recordsMutator(newRecords)
-        val newNode = node.copy(records = newRecords)
+    private fun updateNode(newNode: DSStoreNode, existingBlockNumber: Int, defunctBlocks: MutableList<Int>): Int {
         val newNodeSize = newNode.calculateSize()
         if (newNodeSize > superBlock.pageSize) {
             TODO("Node size would exceed page size, splitting nodes is not yet implemented")
         }
         val newNodeBlock = Block.create(newNodeSize) { stream -> newNode.writeTo(stream) }
-        val newBlockNumber = buddyFile.allocateBlock(newNodeBlock.size, existingBlockNumber)
-        buddyFile.writeBlock(newBlockNumber, newNodeBlock)
+        val newBlockNumber = buddyFile.allocateAndWriteBlock(newNodeBlock)
+        defunctBlocks.add(existingBlockNumber)
         return newBlockNumber
+    }
+
+    private fun updateSuperBlock(modification: (DSStoreSuperBlock) -> DSStoreSuperBlock) {
+        superBlock = modification(superBlock)
+        buddyFile.writeBlock(superBlockNumber, Block.create(DSStoreSuperBlock.SIZE) { stream ->
+            superBlock.writeTo(stream)
+        })
+        buddyFile.flush()
     }
 
     override fun close() {

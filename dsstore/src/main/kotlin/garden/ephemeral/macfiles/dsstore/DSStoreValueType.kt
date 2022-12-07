@@ -1,10 +1,10 @@
 package garden.ephemeral.macfiles.dsstore
-import garden.ephemeral.macfiles.dsstore.types.Blob
-import garden.ephemeral.macfiles.dsstore.types.FourCC
-import garden.ephemeral.macfiles.dsstore.util.DataInput
-import garden.ephemeral.macfiles.dsstore.util.DataOutput
+import garden.ephemeral.macfiles.common.MacTimeUtils
+import garden.ephemeral.macfiles.common.io.DataInput
+import garden.ephemeral.macfiles.common.io.DataOutput
+import garden.ephemeral.macfiles.common.types.Blob
+import garden.ephemeral.macfiles.common.types.FourCC
 import java.nio.charset.StandardCharsets
-import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
@@ -103,15 +103,11 @@ enum class DSStoreValueType(val typeId: FourCC) {
     DATE_UTC(FourCC("dutc")) {
         override fun readValue(stream: DataInput): Any {
             val value = stream.readLong()
-            return MacEpoch
-                .plusSeconds(value / MacDateDivisor)
-                .plusNanos(1_000_000_000L * (value % MacDateDivisor) / MacDateDivisor)
-                .toInstant()
+            return MacTimeUtils.decodeHighResInstant(value)
         }
 
         override fun writeValue(value: Any, stream: DataOutput) {
-            val duration = Duration.between(MacEpoch, value as Instant)
-            val encoded = duration.seconds * MacDateDivisor + (duration.nano * MacDateDivisor / 1_000_000_000L)
+            val encoded = MacTimeUtils.encodeHighResInstant(value as Instant)
             stream.writeLong(encoded)
         }
 

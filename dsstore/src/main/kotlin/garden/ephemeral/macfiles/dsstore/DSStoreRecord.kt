@@ -1,10 +1,10 @@
 package garden.ephemeral.macfiles.dsstore
 import garden.ephemeral.macfiles.dsstore.codecs.PropertyCodecs
-import garden.ephemeral.macfiles.dsstore.types.Blob
-import garden.ephemeral.macfiles.dsstore.types.FourCC
-import garden.ephemeral.macfiles.dsstore.util.Block
-import garden.ephemeral.macfiles.dsstore.util.DataInput
-import garden.ephemeral.macfiles.dsstore.util.DataOutput
+import garden.ephemeral.macfiles.common.types.Blob
+import garden.ephemeral.macfiles.common.types.FourCC
+import garden.ephemeral.macfiles.common.io.Block
+import garden.ephemeral.macfiles.common.io.DataInput
+import garden.ephemeral.macfiles.common.io.DataOutput
 import java.nio.charset.StandardCharsets
 
 /**

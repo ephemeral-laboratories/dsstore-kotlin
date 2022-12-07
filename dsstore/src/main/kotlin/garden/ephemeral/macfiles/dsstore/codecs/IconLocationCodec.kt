@@ -1,8 +1,8 @@
 package garden.ephemeral.macfiles.dsstore.codecs
 
 import garden.ephemeral.macfiles.dsstore.types.IntPoint
-import garden.ephemeral.macfiles.dsstore.util.DataInput
-import garden.ephemeral.macfiles.dsstore.util.DataOutput
+import garden.ephemeral.macfiles.common.io.DataInput
+import garden.ephemeral.macfiles.common.io.DataOutput
 
 object IconLocationCodec : Codec<IntPoint> {
     override fun decode(stream: DataInput): IntPoint {

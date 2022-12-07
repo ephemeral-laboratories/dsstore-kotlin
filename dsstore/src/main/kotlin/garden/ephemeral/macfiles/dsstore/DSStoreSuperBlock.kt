@@ -1,7 +1,7 @@
 package garden.ephemeral.macfiles.dsstore
 
-import garden.ephemeral.macfiles.dsstore.util.DataInput
-import garden.ephemeral.macfiles.dsstore.util.DataOutput
+import garden.ephemeral.macfiles.common.io.DataInput
+import garden.ephemeral.macfiles.common.io.DataOutput
 
 /**
  * Data structure stored in the header block.

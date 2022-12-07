@@ -1,7 +1,7 @@
-package garden.ephemeral.macfiles.dsstore.util
+package garden.ephemeral.macfiles.common.io
 
-import garden.ephemeral.macfiles.dsstore.types.Blob
-import garden.ephemeral.macfiles.dsstore.types.FourCC
+import garden.ephemeral.macfiles.common.types.Blob
+import garden.ephemeral.macfiles.common.types.FourCC
 import java.nio.charset.Charset
 
 /**

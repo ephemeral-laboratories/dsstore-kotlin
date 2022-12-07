@@ -1,7 +1,7 @@
-package garden.ephemeral.macfiles.dsstore.util
+package garden.ephemeral.macfiles.common.io
 
-import garden.ephemeral.macfiles.dsstore.types.Blob
-import garden.ephemeral.macfiles.dsstore.types.FourCC
+import garden.ephemeral.macfiles.common.types.Blob
+import garden.ephemeral.macfiles.common.types.FourCC
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.Charset
@@ -19,6 +19,11 @@ class ByteBufferDataInput(private val buffer: ByteBuffer) : DataInput {
     override fun readByte(): Byte {
         requireAvailable(1)
         return buffer.get()
+    }
+
+    override fun readShort(): Short {
+        requireAvailable(2)
+        return buffer.short
     }
 
     override fun readInt(): Int {
@@ -45,6 +50,12 @@ class ByteBufferDataInput(private val buffer: ByteBuffer) : DataInput {
 
     override fun readString(lengthBytes: Int, charset: Charset): String {
         return readArray(lengthBytes).toString(charset)
+    }
+
+    override fun readPascalString(lengthBytes: Int, charset: Charset): String {
+        requireAvailable(lengthBytes)
+        val length = readByte().toUByte().toInt()
+        return readArray(lengthBytes - 1).copyOf(length).toString(charset)
     }
 
     private fun readArray(lengthBytes: Int): ByteArray {

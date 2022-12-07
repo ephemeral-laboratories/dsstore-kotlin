@@ -1,7 +1,7 @@
 package garden.ephemeral.macfiles.dsstore.codecs
 
 import garden.ephemeral.macfiles.dsstore.DSStoreProperties
-import garden.ephemeral.macfiles.dsstore.types.FourCC
+import garden.ephemeral.macfiles.common.types.FourCC
 
 /**
  * Repository of codecs for known properties.

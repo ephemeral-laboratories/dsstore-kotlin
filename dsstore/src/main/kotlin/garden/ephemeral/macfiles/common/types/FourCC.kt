@@ -1,4 +1,4 @@
-package garden.ephemeral.macfiles.dsstore.types
+package garden.ephemeral.macfiles.common.types
 
 /**
  * Data class for a four-character-code.
@@ -12,5 +12,9 @@ data class FourCC(val value: String) : Comparable<FourCC> {
 
     override fun compareTo(other: FourCC): Int {
         return value.compareTo(other.value)
+    }
+
+    companion object {
+        val ZERO: FourCC = FourCC("\u0000\u0000\u0000\u0000")
     }
 }
