@@ -39,8 +39,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
 
     private fun walk(blockNumber: Int): Sequence<DSStoreRecord> {
         return sequence {
-            val block = buddyFile.readBlock(blockNumber)
-            when (val node = DSStoreNode.readFrom(block)) {
+            when (val node = readNode(blockNumber)) {
                 is DSStoreNode.Leaf -> yieldAll(node.records)
                 is DSStoreNode.Branch -> {
                     node.childBlockNumbers.zip(node.records).forEach { (childBlockNumber, record) ->
@@ -66,39 +65,18 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
     private fun find(key: DSStoreRecordKey, blockNumber: Int): DSStoreRecord? {
         // Logic in here is VERY similar to the logic in `walk` -
         // the main difference is that it skips iterating children if the value cannot be there.
-        val block = buddyFile.readBlock(blockNumber)
-        when (val node = DSStoreNode.readFrom(block)) {
+        return when (val node = readNode(blockNumber)) {
             is DSStoreNode.Leaf -> {
-                node.records.forEach { record ->
-                    val comp = record.compareToKey(key)
-                    if (comp == 0) {
-                        // record == key
-                        return record
-                    } else if (comp < 0) {
-                        // record < key, keep looking
-                    } else {
-                        // comp > 0, record > key, stop looking
-                        return null
-                    }
+                when (val result = findRecord(node.records, key)) {
+                    is Found -> result.record
+                    is NotFound -> null
                 }
-                return null
             }
-
             is DSStoreNode.Branch -> {
-                node.records.forEachIndexed { index, record ->
-                    val comp = record.compareToKey(key)
-                    if (comp == 0) {
-                        // record == key
-                        return record
-                    } else if (comp < 0) {
-                        // record < key, keep looking, no need to search the child node either
-                    } else {
-                        // comp > 0, record > key, search the previous child block and then stop looking
-                        return find(key, node.childBlockNumbers[index])
-                    }
+                when (val result = findRecord(node.records, key)) {
+                    is Found -> result.record
+                    is NotFound -> find(key, node.childBlockNumbers[result.index])
                 }
-                // If we're still going by this point we have to search the right-most node still
-                return find(key, node.childBlockNumbers.last())
             }
         }
     }
@@ -136,70 +114,48 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
         key: DSStoreRecordKey,
         defunctBlocks: MutableList<Int>
     ): Int? {
-        val block = buddyFile.readBlock(blockNumber)
-        when (val node = DSStoreNode.readFrom(block)) {
+        val newNode = when (val node = readNode(blockNumber)) {
             is DSStoreNode.Leaf -> {
-                node.records.forEachIndexed { index, record ->
-                    val comp = record.compareToKey(key)
-                    if (comp == 0) {
-                        // record == key
-                        val newNode = node.withRecordDeletedAt(index)
-                        return updateNode(newNode, blockNumber, defunctBlocks)
-                    } else if (comp < 0) {
-                        // record < key, keep looking
-                    } else {
-                        // comp > 0, record > key, stop looking, current index is the insertion point
-                        return null
-                    }
+                when (val result = findRecord(node.records, key)) {
+                    is Found -> node.withRecordDeletedAt(result.index)
+                    is NotFound -> null
                 }
-                // Not found
-                return null
             }
             is DSStoreNode.Branch -> {
-                node.records.forEachIndexed { index, record ->
-                    val comp = record.compareToKey(key)
-                    if (comp == 0) {
+                when (val result = findRecord(node.records, key)) {
+                    is Found -> {
                         // record == key
-                        val nextChildBlockNumber = node.childBlockNumbers[index + 1]
+                        val nextChildBlockNumber = node.childBlockNumbers[result.index + 1]
                         val firstRecordInNextChild = findFirstRecord(nextChildBlockNumber)
                         if (firstRecordInNextChild == null) {
                             // next child is empty too, so we can just remove both!
                             defunctBlocks.add(nextChildBlockNumber)
-                            val newNode = node.withRecordAndFollowingChildDeletedAt(index)
-                            return updateNode(newNode, blockNumber, defunctBlocks)
+                            node.withRecordAndFollowingChildDeletedAt(result.index)
+                        } else {
+                            // We know it exists now, so we can delete it from the child
+                            val newChildBlockNumber =
+                                deleteInner(nextChildBlockNumber, firstRecordInNextChild.extractKey(), defunctBlocks)!!
+                            // Then put it into the current node
+                            node.withRecordAndFollowingChildReplacedAt(
+                                result.index,
+                                firstRecordInNextChild,
+                                newChildBlockNumber
+                            )
                         }
-                        // We know it exists now, so we can delete it from the child
+                    }
+                    is NotFound -> {
                         val newChildBlockNumber =
-                            deleteInner(nextChildBlockNumber, firstRecordInNextChild.extractKey(), defunctBlocks)!!
-                        val newNode = node.withRecordAndFollowingChildReplacedAt(
-                            index,
-                            firstRecordInNextChild,
-                            newChildBlockNumber
-                        )
-                        // Then put it into the current node
-                        return updateNode(newNode, blockNumber, defunctBlocks)
-                    } else if (comp < 0) {
-                        // record < key, keep looking
-                    } else {
-                        // comp > 0, record > key, search the previous child block and then stop looking
-                        val newChildBlockNumber =
-                            deleteInner(node.childBlockNumbers[index], key, defunctBlocks) ?: return null
-                        val newNode = node.withChildBlockNumberReplacedAt(index, newChildBlockNumber)
-                        return updateNode(newNode, blockNumber, defunctBlocks)
+                            deleteInner(node.childBlockNumbers[result.index], key, defunctBlocks) ?: return null
+                        node.withChildBlockNumberReplacedAt(result.index, newChildBlockNumber)
                     }
                 }
-                // If we're still going by this point we have to search the right-most node still
-                val newChildBlockNumber =
-                    deleteInner(node.childBlockNumbers.last(), key, defunctBlocks) ?: return null
-                val newNode = node.withChildBlockNumberReplacedAt(node.records.size, newChildBlockNumber)
-                return updateNode(newNode, blockNumber, defunctBlocks)
             }
-        }
+        } ?: return null
+        return updateNode(newNode, blockNumber, defunctBlocks)
     }
 
     private fun findFirstRecord(blockNumber: Int): DSStoreRecord? {
-        val block = buddyFile.readBlock(blockNumber)
-        when (val node = DSStoreNode.readFrom(block)) {
+        when (val node = readNode(blockNumber)) {
             is DSStoreNode.Leaf -> {
                 return node.records.firstOrNull()
             }
@@ -221,68 +177,41 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
      */
     fun insertOrReplace(record: DSStoreRecord) {
         val defunctBlocks = mutableListOf<Int>()
-        val newRootBlockNumber = insertOrReplaceInner(superBlock.rootBlockNumber, record, defunctBlocks)
+        val key = record.extractKey()
+        val newRootBlockNumber = insertOrReplaceInner(superBlock.rootBlockNumber, key, record, defunctBlocks)
         updateSuperBlock { s -> s.copy(rootBlockNumber = newRootBlockNumber) }
         defunctBlocks.forEach(buddyFile::releaseBlock)
     }
 
-    // TODO: Try to figure out the best way to reuse walk logic between delete, insert, find
     private fun insertOrReplaceInner(
         blockNumber: Int,
+        key: DSStoreRecordKey,
         newRecord: DSStoreRecord,
         defunctBlocks: MutableList<Int>
     ): Int {
-        val key = newRecord.extractKey()
-        val block = buddyFile.readBlock(blockNumber)
-        when (val node = DSStoreNode.readFrom(block)) {
+        val newNode = when (val node = readNode(blockNumber)) {
             is DSStoreNode.Leaf -> {
-                node.records.forEachIndexed { index, record ->
-                    val comp = record.compareToKey(key)
-                    if (comp == 0) {
-                        // record == key
-                        val newNode = node.withRecordReplacedAt(index, newRecord)
-                        return updateNode(newNode, blockNumber, defunctBlocks)
-                    } else if (comp < 0) {
-                        // record < key, keep looking
-                    } else {
-                        // comp > 0, record > key, stop looking, current index is the insertion point
-                        val newNode = node.withRecordInsertedAt(index, newRecord)
-                        return updateNode(newNode, blockNumber, defunctBlocks)
-                    }
+                when (val result = findRecord(node.records, key)) {
+                    is Found -> node.withRecordReplacedAt(result.index, newRecord)
+                    is NotFound -> node.withRecordInsertedAt(result.index, newRecord)
                 }
-                // insertion point is at the end
-                val newNode = node.withRecordInsertedAt(node.records.size, newRecord)
-                return updateNode(newNode, blockNumber, defunctBlocks)
             }
-
             is DSStoreNode.Branch -> {
-                node.records.forEachIndexed { index, record ->
-                    val comp = record.compareToKey(key)
-                    if (comp == 0) {
-                        // record == key
-                        val newNode = node.withRecordReplacedAt(index, newRecord)
-                        return updateNode(newNode, blockNumber, defunctBlocks)
-                    } else if (comp < 0) {
-                        // record < key, keep looking, no need to search the child node either
-                    } else {
-                        // comp > 0, record > key, search the previous child block and then stop looking
+                when (val result = findRecord(node.records, key)) {
+                    is Found -> node.withRecordReplacedAt(result.index, newRecord)
+                    is NotFound -> {
                         val newChildBlockNumber =
-                            insertOrReplaceInner(node.childBlockNumbers[index], newRecord, defunctBlocks)
+                            insertOrReplaceInner(node.childBlockNumbers[result.index], key, newRecord, defunctBlocks)
                         // XXX: Slightly less than great thing here - if the child block was a newly-created
                         //      branch which will only have 2 children, that whole branch might fit inside the
                         //      current branch. So here, we could try to merge the two. It isn't required to
                         //      get a working file.
-                        val newNode = node.withChildBlockNumberReplacedAt(index, newChildBlockNumber)
-                        return updateNode(newNode, blockNumber, defunctBlocks)
+                        node.withChildBlockNumberReplacedAt(result.index, newChildBlockNumber)
                     }
                 }
-                // If we're still going by this point we have to search the right-most node still
-                val newChildBlockNumber =
-                    insertOrReplaceInner(node.childBlockNumbers.last(), newRecord, defunctBlocks)
-                val newNode = node.withChildBlockNumberReplacedAt(node.records.size, newChildBlockNumber)
-                return updateNode(newNode, blockNumber, defunctBlocks)
             }
         }
+        return updateNode(newNode, blockNumber, defunctBlocks)
     }
 
     private fun updateNode(newNodeIn: DSStoreNode, existingBlockNumber: Int, defunctBlocks: MutableList<Int>): Int {
@@ -309,6 +238,11 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
         }
         val newNodeBlock = Block.create(newNodeSize) { stream -> newNode.writeTo(stream) }
         return buddyFile.allocateAndWriteBlock(newNodeBlock)
+    }
+
+    private fun readNode(blockNumber: Int): DSStoreNode {
+        val block = buddyFile.readBlock(blockNumber)
+        return DSStoreNode.readFrom(block)
     }
 
     private fun updateSuperBlock(modification: (DSStoreSuperBlock) -> DSStoreSuperBlock) {
@@ -360,5 +294,28 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
 
             return DSStore(buddyFile)
         }
+
+        /**
+         * Searches for a key in a list of records.
+         *
+         * @param records the records to search in.
+         * @param key the key to search for.
+         * @return a result, either [Found] (in which case includes the index and the record),
+         *         or [NotFound] (in which case includes the insertion index.)
+         */
+        private fun findRecord(records: List<DSStoreRecord>, key: DSStoreRecordKey) : RecordSearchResult {
+            records.forEachIndexed { index, record ->
+                val comp = record.compareToKey(key)
+                if (comp == 0) {
+                    return Found(index, record)
+                } else if (comp > 0) {
+                    return NotFound(index)
+                }
+            }
+            return NotFound(records.size)
+        }
+        private sealed class RecordSearchResult
+        private data class Found(val index: Int, val record: DSStoreRecord) : RecordSearchResult()
+        private data class NotFound(val index: Int) : RecordSearchResult()
     }
 }
