@@ -7,7 +7,8 @@ package garden.ephemeral.macfiles.common.types
  */
 data class FourCC(val value: String) : Comparable<FourCC> {
     init {
-        require (value.length == 4) { "FourCC must be length 4" }
+        require(value.length == 4) { "FourCC must be length 4" }
+        require(value.toByteArray().size == 4) { "FourCC must contain only ASCII" }
     }
 
     override fun compareTo(other: FourCC): Int {
