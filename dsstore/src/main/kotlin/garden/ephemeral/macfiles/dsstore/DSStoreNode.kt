@@ -21,6 +21,18 @@ sealed class DSStoreNode {
      */
     abstract fun writeTo(stream: DataOutput)
 
+    /**
+     * Splits the node into two nodes with a pivot record.
+     * The returned nodes would end up in two new blocks, while the pivot record
+     * would be stored directly in the branch node.
+     *
+     * @return a triple containing:
+     *         - a node containing all the records before the pivot point
+     *         - a record at the pivot point
+     *         - a node containing all the records after the pivot point
+     */
+    abstract fun split(): Triple<DSStoreNode, DSStoreRecord, DSStoreNode>
+
     companion object {
 
         /**
@@ -30,10 +42,10 @@ sealed class DSStoreNode {
          * @return the read node.
          */
         fun readFrom(stream: DataInput): DSStoreNode {
-            val lastChildNodeBlockNumber = stream.readInt()
+            val lastChildBlockNumber = stream.readInt()
             val count = stream.readInt()
 
-            if (lastChildNodeBlockNumber == 0) {
+            if (lastChildBlockNumber == 0) {
                 // External (leaf) case
                 val records = mutableListOf<DSStoreRecord>()
                 repeat(count) {
@@ -43,14 +55,28 @@ sealed class DSStoreNode {
             } else {
                 // Internal (branch) case
                 val records = mutableListOf<DSStoreRecord>()
-                val childNodeBlockNumbers = mutableListOf<Int>()
+                val childBlockNumbers = mutableListOf<Int>()
                 repeat(count) {
-                    childNodeBlockNumbers.add(stream.readInt())
+                    childBlockNumbers.add(stream.readInt())
                     records.add(DSStoreRecord.readFrom(stream))
                 }
-                childNodeBlockNumbers.add(lastChildNodeBlockNumber)
-                return Branch(records.toList(), childNodeBlockNumbers.toList())
+                childBlockNumbers.add(lastChildBlockNumber)
+                return Branch(records.toList(), childBlockNumbers.toList())
             }
+        }
+
+        private fun findPivot(records: List<DSStoreRecord>): IndexedValue<DSStoreRecord> {
+            // Finding a suitable pivot index
+            val totalSize = records.sumOf(DSStoreRecord::calculateSize)
+            val targetSize = totalSize / 2
+            var accumulatedSize = 0
+            // We know this always has to find some value, because the last record
+            // in the collection must bring the accumulated size to the total.
+            return records.withIndex().find { (_, record) ->
+                val recordSize = record.calculateSize()
+                accumulatedSize += recordSize
+                accumulatedSize > targetSize
+            }!!
         }
     }
 
@@ -105,28 +131,8 @@ sealed class DSStoreNode {
             return copy(records = recordsCopy.toList())
         }
 
-        /**
-         * Splits the node into two nodes with a pivot record.
-         * The returned nodes would end up in two new blocks, while the pivot record
-         * would be stored directly in the branch node.
-         *
-         * @return a triple containing:
-         *         - a node containing all the records before the pivot point
-         *         - a record at the pivot point
-         *         - a node containing all the records after the pivot point
-         */
-        fun split(): Triple<DSStoreNode, DSStoreRecord, DSStoreNode> {
-            // Finding a suitable pivot index
-            val totalSize = records.sumOf(DSStoreRecord::calculateSize)
-            val targetSize = totalSize / 2
-            var accumulatedSize = 0
-            // We know this always has to find some value, because the last record
-            // in the collection must bring the accumulated size to the total.
-            val (pivotIndex, pivot) = records.withIndex().find { (_, record) ->
-                val recordSize = record.calculateSize()
-                accumulatedSize += recordSize
-                accumulatedSize > targetSize
-            }!!
+        override fun split(): Triple<DSStoreNode, DSStoreRecord, DSStoreNode> {
+            val (pivotIndex, pivot) = findPivot(records)
 
             return Triple(
                 Leaf(records.slice(0 until pivotIndex)),
@@ -136,23 +142,23 @@ sealed class DSStoreNode {
         }
     }
 
-    data class Branch(val records: List<DSStoreRecord>, val childNodeBlockNumbers: List<Int>) : DSStoreNode() {
+    data class Branch(val records: List<DSStoreRecord>, val childBlockNumbers: List<Int>) : DSStoreNode() {
         init {
-            require(records.size == childNodeBlockNumbers.size - 1) {
-                "childNodeBlockNumbers size (${childNodeBlockNumbers.size}) " +
+            require(records.size == childBlockNumbers.size - 1) {
+                "childBlockNumbers size (${childBlockNumbers.size}) " +
                         "must be one greater than records size (${records.size})"
             }
         }
 
         override fun calculateSize(): Int {
-            return 8 + records.sumOf(DSStoreRecord::calculateSize) + childNodeBlockNumbers.size * 4
+            return 8 + records.sumOf(DSStoreRecord::calculateSize) + childBlockNumbers.size * 4
         }
 
         override fun writeTo(stream: DataOutput) {
-            stream.writeInt(childNodeBlockNumbers.last())
+            stream.writeInt(childBlockNumbers.last())
             stream.writeInt(records.size)
-            childNodeBlockNumbers.zip(records).forEach { (childNodeBlockNumber, record) ->
-                stream.writeInt(childNodeBlockNumber)
+            childBlockNumbers.zip(records).forEach { (childBlockNumber, record) ->
+                stream.writeInt(childBlockNumber)
                 record.writeTo(stream)
             }
         }
@@ -164,17 +170,17 @@ sealed class DSStoreNode {
         }
 
         fun withChildBlockNumberReplacedAt(index: Int, newChildBlockNumber: Int): Branch {
-            val newChildBlockNumbers = childNodeBlockNumbers.toMutableList()
+            val newChildBlockNumbers = childBlockNumbers.toMutableList()
             newChildBlockNumbers[index] = newChildBlockNumber
-            return copy(childNodeBlockNumbers = newChildBlockNumbers)
+            return copy(childBlockNumbers = newChildBlockNumbers)
         }
 
         fun withRecordAndFollowingChildDeletedAt(index: Int): Branch {
             val newRecords = records.toMutableList()
-            val newChildBlockNumbers = childNodeBlockNumbers.toMutableList()
+            val newChildBlockNumbers = childBlockNumbers.toMutableList()
             newRecords.removeAt(index)
             newChildBlockNumbers.removeAt(index + 1)
-            return copy(records = newRecords, childNodeBlockNumbers = newChildBlockNumbers)
+            return copy(records = newRecords, childBlockNumbers = newChildBlockNumbers)
         }
 
         fun withRecordAndFollowingChildReplacedAt(
@@ -183,10 +189,26 @@ sealed class DSStoreNode {
             newChildBlockNumber: Int
         ): DSStoreNode {
             val newRecords = records.toMutableList()
-            val newChildBlockNumbers = childNodeBlockNumbers.toMutableList()
+            val newChildBlockNumbers = childBlockNumbers.toMutableList()
             newRecords[index] = newRecord
             newChildBlockNumbers[index + 1] = newChildBlockNumber
-            return copy(records = newRecords, childNodeBlockNumbers = newChildBlockNumbers)
+            return copy(records = newRecords, childBlockNumbers = newChildBlockNumbers)
+        }
+
+        override fun split(): Triple<DSStoreNode, DSStoreRecord, DSStoreNode> {
+            val (pivotIndex, pivot) = findPivot(records)
+
+            return Triple(
+                Branch(
+                    records.slice(0 until pivotIndex),
+                    childBlockNumbers.slice(0..pivotIndex)
+                ),
+                pivot,
+                Branch(
+                    records.slice(pivotIndex + 1 until records.size),
+                    childBlockNumbers.slice((pivotIndex + 1)..records.size)
+                )
+            )
         }
     }
 }

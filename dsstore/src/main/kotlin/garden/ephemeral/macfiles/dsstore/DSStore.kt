@@ -43,11 +43,11 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
             when (val node = DSStoreNode.readFrom(block)) {
                 is DSStoreNode.Leaf -> yieldAll(node.records)
                 is DSStoreNode.Branch -> {
-                    node.childNodeBlockNumbers.zip(node.records).forEach { (childNodeBlockNumber, record) ->
-                        yieldAll(walk(childNodeBlockNumber))
+                    node.childBlockNumbers.zip(node.records).forEach { (childBlockNumber, record) ->
+                        yieldAll(walk(childBlockNumber))
                         yield(record)
                     }
-                    yieldAll(walk(node.childNodeBlockNumbers.last()))
+                    yieldAll(walk(node.childBlockNumbers.last()))
                 }
             }
         }
@@ -94,11 +94,11 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                         // record < key, keep looking, no need to search the child node either
                     } else {
                         // comp > 0, record > key, search the previous child block and then stop looking
-                        return find(key, node.childNodeBlockNumbers[index])
+                        return find(key, node.childBlockNumbers[index])
                     }
                 }
                 // If we're still going by this point we have to search the right-most node still
-                return find(key, node.childNodeBlockNumbers.last())
+                return find(key, node.childBlockNumbers.last())
             }
         }
     }
@@ -160,7 +160,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                     val comp = record.compareToKey(key)
                     if (comp == 0) {
                         // record == key
-                        val nextChildBlockNumber = node.childNodeBlockNumbers[index + 1]
+                        val nextChildBlockNumber = node.childBlockNumbers[index + 1]
                         val firstRecordInNextChild = findFirstRecord(nextChildBlockNumber)
                         if (firstRecordInNextChild == null) {
                             // next child is empty too, so we can just remove both!
@@ -183,14 +183,14 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                     } else {
                         // comp > 0, record > key, search the previous child block and then stop looking
                         val newChildBlockNumber =
-                            deleteInner(node.childNodeBlockNumbers[index], key, defunctBlocks) ?: return null
+                            deleteInner(node.childBlockNumbers[index], key, defunctBlocks) ?: return null
                         val newNode = node.withChildBlockNumberReplacedAt(index, newChildBlockNumber)
                         return updateNode(newNode, blockNumber, defunctBlocks)
                     }
                 }
                 // If we're still going by this point we have to search the right-most node still
                 val newChildBlockNumber =
-                    deleteInner(node.childNodeBlockNumbers.last(), key, defunctBlocks) ?: return null
+                    deleteInner(node.childBlockNumbers.last(), key, defunctBlocks) ?: return null
                 val newNode = node.withChildBlockNumberReplacedAt(node.records.size, newChildBlockNumber)
                 return updateNode(newNode, blockNumber, defunctBlocks)
             }
@@ -205,7 +205,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
             }
 
             is DSStoreNode.Branch -> {
-                val found = findFirstRecord(node.childNodeBlockNumbers.first())
+                val found = findFirstRecord(node.childBlockNumbers.first())
                 if (found != null) {
                     return found
                 }
@@ -267,7 +267,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                     } else {
                         // comp > 0, record > key, search the previous child block and then stop looking
                         val newChildBlockNumber =
-                            insertOrReplaceInner(node.childNodeBlockNumbers[index], newRecord, defunctBlocks)
+                            insertOrReplaceInner(node.childBlockNumbers[index], newRecord, defunctBlocks)
                         // XXX: Slightly less than great thing here - if the child block was a newly-created
                         //      branch which will only have 2 children, that whole branch might fit inside the
                         //      current branch. So here, we could try to merge the two. It isn't required to
@@ -278,7 +278,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                 }
                 // If we're still going by this point we have to search the right-most node still
                 val newChildBlockNumber =
-                    insertOrReplaceInner(node.childNodeBlockNumbers.last(), newRecord, defunctBlocks)
+                    insertOrReplaceInner(node.childBlockNumbers.last(), newRecord, defunctBlocks)
                 val newNode = node.withChildBlockNumberReplacedAt(node.records.size, newChildBlockNumber)
                 return updateNode(newNode, blockNumber, defunctBlocks)
             }
@@ -289,21 +289,13 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
         var newNode = newNodeIn
         val newNodeSize = newNode.calculateSize()
         if (newNodeSize > superBlock.pageSize) {
-            when (newNode) {
-                is DSStoreNode.Leaf -> {
-                    val (nodeBefore, pivot, nodeAfter) = newNode.split()
-                    val nodeBeforeBlockNumber = writeNode(nodeBefore)
-                    val nodeAfterBlockNumber = writeNode(nodeAfter)
-                    newNode = DSStoreNode.Branch(
-                        records = listOf(pivot),
-                        childNodeBlockNumbers = listOf(nodeBeforeBlockNumber, nodeAfterBlockNumber)
-                    )
-                }
-
-                is DSStoreNode.Branch ->
-                    // Might be possible to use the same code as the leaf case
-                    TODO("Node size would exceed page size, splitting branch nodes is not yet implemented")
-            }
+            val (nodeBefore, pivot, nodeAfter) = newNode.split()
+            val nodeBeforeBlockNumber = writeNode(nodeBefore)
+            val nodeAfterBlockNumber = writeNode(nodeAfter)
+            newNode = DSStoreNode.Branch(
+                records = listOf(pivot),
+                childBlockNumbers = listOf(nodeBeforeBlockNumber, nodeAfterBlockNumber)
+            )
         }
         val newBlockNumber = writeNode(newNode)
         defunctBlocks.add(existingBlockNumber)
