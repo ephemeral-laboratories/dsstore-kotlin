@@ -165,9 +165,8 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                     val comp = record.compareToKey(key)
                     if (comp == 0) {
                         // record == key
-                        TODO("What now?")
-                        // This might work, needs a test case
-                        // return updateBranchNode(node, blockNumber) { it.withRecordReplacedAt(index, newRecord) }
+                        val newNode = node.withRecordReplacedAt(index, newRecord)
+                        return updateNode(newNode, blockNumber, defunctBlocks)
                     } else if (comp < 0) {
                         // record < key, keep looking, no need to search the child node either
                     } else {

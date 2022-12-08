@@ -3,7 +3,6 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import garden.ephemeral.macfiles.dsstore.types.IntPoint
-import java.nio.file.Path
 import kotlin.test.Test
 
 class DSStoreReadTests {
@@ -49,7 +48,4 @@ class DSStoreReadTests {
                 .isNull()
         }
     }
-
-    private fun getFilePath(filename: String) =
-        Path.of("src/test/resources/garden/ephemeral/macfiles/dsstore/$filename")
 }

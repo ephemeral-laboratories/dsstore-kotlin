@@ -4,6 +4,7 @@ import assertk.assertions.isEqualTo
 import garden.ephemeral.macfiles.dsstore.types.IntPoint
 import garden.ephemeral.macfiles.dsstore.util.FileMode
 import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
 
@@ -82,6 +83,18 @@ class DSStoreWriteTests {
             (1..100).forEach { n ->
                 assertThat(store["file$n", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(n, n))
             }
+        }
+    }
+
+    @Test
+    fun `replacing an element which was directly inside a branch`() {
+        val file = temp.resolve("my.DS_Store")
+        Files.copy(getFilePath("branch-at-file52.DS_Store"), file)
+        DSStore.open(file, FileMode.READ_WRITE).use { store ->
+            store.insertOrReplace(DSStoreRecord("file52", DSStoreProperties.IconLocation, IntPoint(42, 42)))
+        }
+        DSStore.open(file).use { store ->
+            assertThat(store["file52", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(42, 42))
         }
     }
 }
