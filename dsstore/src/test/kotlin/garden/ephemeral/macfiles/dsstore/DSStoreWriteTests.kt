@@ -110,4 +110,19 @@ class DSStoreWriteTests {
             assertThat(store["baz", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(454, 124))
         }
     }
+
+    @Test
+    fun `deleting last record`() {
+        val file = temp.resolve("my.DS_Store")
+        Files.copy(getFilePath("trivial.DS_Store"), file)
+        DSStore.open(file, FileMode.READ_WRITE).use { store ->
+            store.delete("bar", DSStoreProperties.IconLocation)
+            store.delete("bam", DSStoreProperties.IconLocation)
+            store.delete("baz", DSStoreProperties.IconLocation)
+        }
+        DSStore.open(file).use { store ->
+            val recordCount = store.walk().count()
+            assertThat(recordCount).isEqualTo(0)
+        }
+    }
 }
