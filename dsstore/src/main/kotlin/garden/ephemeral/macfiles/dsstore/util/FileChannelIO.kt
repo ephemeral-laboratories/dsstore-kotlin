@@ -53,6 +53,7 @@ class FileChannelIO(private val channel: FileChannel) : Closeable {
     }
 
     override fun close() {
+        flush()
         channel.close()
     }
 

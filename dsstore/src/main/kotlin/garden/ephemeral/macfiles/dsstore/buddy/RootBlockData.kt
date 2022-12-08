@@ -23,7 +23,11 @@ data class RootBlockData(
      * @return the size of the data, in bytes.
      */
     fun calculateSize(): Int {
-        var size = 4 + 4 + blockAddresses.size * 4
+        // Starting with the int for the number of block addresses and the 4 skipped bytes
+        var size = 4 + 4
+
+        // One int for each block address
+        size += blockAddresses.size * 4
 
         // Pad to 256-entry (1024-byte) boundary
         val extra = blockAddresses.size % 256
@@ -31,12 +35,15 @@ data class RootBlockData(
             size += (256 - extra) * 4
         }
 
+        // number of toc entries
         size += 4
         tocEntries.forEach { tocEntry ->
-            size += 5 + tocEntry.key.length
+            // One byte for length of string, plus string itself, plus int
+            size += 1 + tocEntry.key.length + 4
         }
 
         freeLists.forEach { freeList ->
+            // 4 bytes for the size of the free list, followed by the int entries
             size += 4 + freeList.size * 4
         }
 

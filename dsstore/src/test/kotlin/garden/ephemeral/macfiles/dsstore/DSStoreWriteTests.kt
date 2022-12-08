@@ -87,7 +87,7 @@ class DSStoreWriteTests {
     }
 
     @Test
-    fun `replacing an element which was directly inside a branch`() {
+    fun `replacing an record which was directly inside a branch`() {
         val file = temp.resolve("my.DS_Store")
         Files.copy(getFilePath("branch-at-file52.DS_Store"), file)
         DSStore.open(file, FileMode.READ_WRITE).use { store ->
@@ -95,6 +95,19 @@ class DSStoreWriteTests {
         }
         DSStore.open(file).use { store ->
             assertThat(store["file52", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(42, 42))
+        }
+    }
+
+    @Test
+    fun `deleting a record`() {
+        val file = temp.resolve("my.DS_Store")
+        Files.copy(getFilePath("trivial.DS_Store"), file)
+        DSStore.open(file, FileMode.READ_WRITE).use { store ->
+            store.delete("bar", DSStoreProperties.IconLocation)
+        }
+        DSStore.open(file).use { store ->
+            assertThat(store["bam", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(104, 116))
+            assertThat(store["baz", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(454, 124))
         }
     }
 }

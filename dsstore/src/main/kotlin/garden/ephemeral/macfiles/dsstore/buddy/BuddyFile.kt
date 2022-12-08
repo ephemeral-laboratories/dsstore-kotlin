@@ -60,7 +60,6 @@ class BuddyFile(private val stream: FileChannelIO) : Closeable {
         }
 
         updateRootBlockData { r -> r.copy(tocEntries = newTocEntries) }
-        flush()
 
         return newBlockNumber
     }
@@ -197,7 +196,6 @@ class BuddyFile(private val stream: FileChannelIO) : Closeable {
 
     private fun updateRootBlockData(modification: (RootBlockData) -> RootBlockData) {
         rootBlockData = modification(rootBlockData)
-        header = header.copy(rootBlockSize = rootBlockData.calculateSize())
         dirty = true
     }
 
@@ -220,8 +218,11 @@ class BuddyFile(private val stream: FileChannelIO) : Closeable {
      */
     fun writeBlock(blockNumber: Int, block: Block) {
         val blockAddress = getBlockAddress(blockNumber)
+        writeBlock(blockAddress, block)
+    }
+
+    private fun writeBlock(blockAddress: BlockAddress, block: Block) {
         stream.writeBlock(blockAddress.blockOffset + 4L, block)
-        flush()
     }
 
     private fun getBlockAddress(blockNumber: Int): BlockAddress {
@@ -237,12 +238,32 @@ class BuddyFile(private val stream: FileChannelIO) : Closeable {
      */
     fun flush() {
         if (dirty) {
-            stream.writeBlock(ROOT_BLOCK_OFFSET + 4L, Block.create(rootBlockData.calculateSize()) { stream ->
+            // Safely write root block at a new location, so it doesn't clobber the existing one
+            // in case it fails part way through.
+            // This is the one case where we can't just allocate a new block the normal way and
+            // have to use the private methods - the root block must always be block 0.
+            val newRootBlockSizeLog2 = BlockAddress.calculateMinimumSizeLog2(rootBlockData.calculateSize())
+            val newRootBlockAddress = allocInner(newRootBlockSizeLog2)
+            // Forced to call calculateSize() a second time because the reallocation can change the value
+            val newRootBlockSize = rootBlockData.calculateSize()
+            val newRootBlockOffset = newRootBlockAddress.blockOffset
+            writeBlock(newRootBlockAddress, Block.create(newRootBlockSize) { stream ->
                 rootBlockData.writeTo(stream)
             })
+            releaseInner(BlockAddress(
+                header.rootBlockOffset,
+                BlockAddress.calculateMinimumSizeLog2(header.rootBlockSize)
+            ))
+
+            header = header.copy(
+                rootBlockOffset = newRootBlockOffset,
+                rootBlockSize = newRootBlockSize,
+                rootBlockOffset2 = newRootBlockOffset
+            )
             stream.writeBlock(4L, Block.create(BuddyHeader.SIZE) { stream ->
                 header.writeTo(stream)
             })
+
             dirty = false
         }
 
@@ -250,11 +271,11 @@ class BuddyFile(private val stream: FileChannelIO) : Closeable {
     }
 
     override fun close() {
+        flush()
         stream.close()
     }
 
     companion object {
-        private const val ROOT_BLOCK_OFFSET = 2048
         private const val FILE_MAGIC = 1
 
         /**
@@ -290,15 +311,23 @@ class BuddyFile(private val stream: FileChannelIO) : Closeable {
         )
 
         private fun writeInitialEmptyFile(channel: FileChannelIO) {
+            val rootBlockOffset = 2048
+
             channel.writeBlock(0, Block.create(2048) { stream ->
                 stream.writeInt(FILE_MAGIC)
-                val header = BuddyHeader(BuddyHeader.MAGIC, 2048, 1264, 2048, Blob(UNKNOWN16_PLACEHOLDER))
+                val header = BuddyHeader(
+                    BuddyHeader.MAGIC,
+                    rootBlockOffset,
+                    1264,
+                    rootBlockOffset,
+                    Blob(UNKNOWN16_PLACEHOLDER)
+                )
                 header.writeTo(stream)
             })
 
             val rootBlockData = RootBlockData(
                 // XXX: Could build this address from its parts, requires understanding the value
-                listOf(BlockAddress(ROOT_BLOCK_OFFSET, 5)),
+                listOf(BlockAddress(rootBlockOffset, 5)),
                 mapOf(),
                 buildList {
                     for (n in 0..4) {
@@ -315,7 +344,7 @@ class BuddyFile(private val stream: FileChannelIO) : Closeable {
                 }
             )
 
-            channel.writeBlock(ROOT_BLOCK_OFFSET + 4L, Block.create(rootBlockData.calculateSize()) { stream ->
+            channel.writeBlock(rootBlockOffset + 4L, Block.create(rootBlockData.calculateSize()) { stream ->
                 rootBlockData.writeTo(stream)
             })
 

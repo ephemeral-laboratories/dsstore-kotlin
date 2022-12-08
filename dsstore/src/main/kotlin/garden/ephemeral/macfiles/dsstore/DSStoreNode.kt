@@ -94,6 +94,18 @@ sealed class DSStoreNode {
         }
 
         /**
+         * Clones the node with the record at the given index deleted.
+         *
+         * @param index the index to delete at.
+         * @return the new node.
+         */
+        fun withRecordDeletedAt(index: Int): Leaf {
+            val recordsCopy = records.toMutableList()
+            recordsCopy.removeAt(index)
+            return copy(records = recordsCopy.toList())
+        }
+
+        /**
          * Splits the node into two nodes with a pivot record.
          * The returned nodes would end up in two new blocks, while the pivot record
          * would be stored directly in the branch node.

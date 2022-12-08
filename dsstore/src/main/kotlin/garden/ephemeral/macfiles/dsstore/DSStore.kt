@@ -106,17 +106,64 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
     /**
      * Deletes a record.
      *
+     * Does nothing if the record did not exist.
+     *
+     * @param filename the record filename.
+     * @param propertyId the record property ID.
+     */
+    fun delete(filename: String, propertyId: FourCC) {
+        delete(DSStoreRecordKey(filename, propertyId))
+    }
+
+    /**
+     * Deletes a record.
+     *
+     * Does nothing if the record did not exist.
+     *
      * @param key the key for looking up the record.
      */
     fun delete(key: DSStoreRecordKey) {
-        // Cases:
-        //   - Record doesn't exist - nothing to do
-        //   - Record is in a leaf node
-        //     - Record should be deleted in the leaf node - may become empty!
-        //   - Record is in a branch node
-        //     - Record should be deleted in the branch node - now have to peel some record off
-        //       one of the leaves either side to put in as the dividing record
-        TODO()
+        val defunctBlocks = mutableListOf<Int>()
+        val newRootBlockNumber = deleteInner(superBlock.rootBlockNumber, key, defunctBlocks)
+        if (newRootBlockNumber != null) {
+            updateSuperBlock { s -> s.copy(rootBlockNumber = newRootBlockNumber) }
+            defunctBlocks.forEach(buddyFile::releaseBlock)
+        }
+    }
+
+    private fun deleteInner(
+        blockNumber: Int,
+        key: DSStoreRecordKey,
+        defunctBlocks: MutableList<Int>
+    ): Int? {
+        val block = buddyFile.readBlock(blockNumber)
+        when (val node = DSStoreNode.readFrom(block)) {
+            is DSStoreNode.Leaf -> {
+                node.records.forEachIndexed { index, record ->
+                    val comp = record.compareToKey(key)
+                    if (comp == 0) {
+                        // record == key
+                        val newNode = node.withRecordDeletedAt(index)
+                        return updateNode(newNode, blockNumber, defunctBlocks)
+                    } else if (comp < 0) {
+                        // record < key, keep looking
+                    } else {
+                        // comp > 0, record > key, stop looking, current index is the insertion point
+                        return null
+                    }
+                }
+
+                // Not found
+                return null
+            }
+            is DSStoreNode.Branch -> {
+                TODO()
+                //   - Record is in a branch node
+                //     - Record should be deleted in the branch node - now have to peel some record off
+                //       one of the leaves either side to put in as the dividing record
+
+            }
+        }
     }
 
     /**
@@ -206,6 +253,7 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                 }
 
                 is DSStoreNode.Branch ->
+                    // Might be possible to use the same code as the leaf case
                     TODO("Node size would exceed page size, splitting branch nodes is not yet implemented")
             }
         }
@@ -228,7 +276,6 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
         buddyFile.writeBlock(superBlockNumber, Block.create(DSStoreSuperBlock.SIZE) { stream ->
             superBlock.writeTo(stream)
         })
-        buddyFile.flush()
     }
 
     override fun close() {
