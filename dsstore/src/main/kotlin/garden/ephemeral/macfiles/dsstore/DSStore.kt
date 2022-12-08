@@ -152,16 +152,64 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                         return null
                     }
                 }
-
                 // Not found
                 return null
             }
             is DSStoreNode.Branch -> {
-                TODO()
-                //   - Record is in a branch node
-                //     - Record should be deleted in the branch node - now have to peel some record off
-                //       one of the leaves either side to put in as the dividing record
+                node.records.forEachIndexed { index, record ->
+                    val comp = record.compareToKey(key)
+                    if (comp == 0) {
+                        // record == key
+                        val nextChildBlockNumber = node.childNodeBlockNumbers[index + 1]
+                        val firstRecordInNextChild = findFirstRecord(nextChildBlockNumber)
+                        if (firstRecordInNextChild == null) {
+                            // next child is empty too, so we can just remove both!
+                            defunctBlocks.add(nextChildBlockNumber)
+                            val newNode = node.withRecordAndFollowingChildDeletedAt(index)
+                            return updateNode(newNode, blockNumber, defunctBlocks)
+                        }
+                        // We know it exists now, so we can delete it from the child
+                        val newChildBlockNumber =
+                            deleteInner(nextChildBlockNumber, firstRecordInNextChild.extractKey(), defunctBlocks)!!
+                        val newNode = node.withRecordAndFollowingChildReplacedAt(
+                            index,
+                            firstRecordInNextChild,
+                            newChildBlockNumber
+                        )
+                        // Then put it into the current node
+                        return updateNode(newNode, blockNumber, defunctBlocks)
+                    } else if (comp < 0) {
+                        // record < key, keep looking
+                    } else {
+                        // comp > 0, record > key, search the previous child block and then stop looking
+                        val newChildBlockNumber =
+                            deleteInner(node.childNodeBlockNumbers[index], key, defunctBlocks) ?: return null
+                        val newNode = node.withChildBlockNumberReplacedAt(index, newChildBlockNumber)
+                        return updateNode(newNode, blockNumber, defunctBlocks)
+                    }
+                }
+                // If we're still going by this point we have to search the right-most node still
+                val newChildBlockNumber =
+                    deleteInner(node.childNodeBlockNumbers.last(), key, defunctBlocks) ?: return null
+                val newNode = node.withChildBlockNumberReplacedAt(node.records.size, newChildBlockNumber)
+                return updateNode(newNode, blockNumber, defunctBlocks)
+            }
+        }
+    }
 
+    private fun findFirstRecord(blockNumber: Int): DSStoreRecord? {
+        val block = buddyFile.readBlock(blockNumber)
+        when (val node = DSStoreNode.readFrom(block)) {
+            is DSStoreNode.Leaf -> {
+                return node.records.firstOrNull()
+            }
+
+            is DSStoreNode.Branch -> {
+                val found = findFirstRecord(node.childNodeBlockNumbers.first())
+                if (found != null) {
+                    return found
+                }
+                return node.records.first()
             }
         }
     }

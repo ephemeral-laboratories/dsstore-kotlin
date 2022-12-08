@@ -1,6 +1,7 @@
 package garden.ephemeral.macfiles.dsstore
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import garden.ephemeral.macfiles.dsstore.types.IntPoint
 import garden.ephemeral.macfiles.dsstore.util.FileMode
 import org.junit.jupiter.api.io.TempDir
@@ -123,6 +124,21 @@ class DSStoreWriteTests {
         DSStore.open(file).use { store ->
             val recordCount = store.walk().count()
             assertThat(recordCount).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun `deleting a record which was directly inside a branch`() {
+        val file = temp.resolve("my.DS_Store")
+        Files.copy(getFilePath("branch-at-file52.DS_Store"), file)
+        DSStore.open(file, FileMode.READ_WRITE).use { store ->
+            store.delete("file52", DSStoreProperties.IconLocation)
+        }
+        DSStore.open(file).use { store ->
+            assertThat(store["file52", DSStoreProperties.IconLocation]).isNull()
+            // Entries either side are still good
+            assertThat(store["file51", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(51, 51))
+            assertThat(store["file53", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(53, 53))
         }
     }
 }

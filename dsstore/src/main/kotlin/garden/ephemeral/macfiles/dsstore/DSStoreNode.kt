@@ -129,7 +129,7 @@ sealed class DSStoreNode {
             }!!
 
             return Triple(
-                Leaf(records.slice(0..pivotIndex)),
+                Leaf(records.slice(0 until pivotIndex)),
                 pivot,
                 Leaf(records.slice(pivotIndex + 1 until records.size))
             )
@@ -167,6 +167,26 @@ sealed class DSStoreNode {
             val newChildBlockNumbers = childNodeBlockNumbers.toMutableList()
             newChildBlockNumbers[index] = newChildBlockNumber
             return copy(childNodeBlockNumbers = newChildBlockNumbers)
+        }
+
+        fun withRecordAndFollowingChildDeletedAt(index: Int): Branch {
+            val newRecords = records.toMutableList()
+            val newChildBlockNumbers = childNodeBlockNumbers.toMutableList()
+            newRecords.removeAt(index)
+            newChildBlockNumbers.removeAt(index + 1)
+            return copy(records = newRecords, childNodeBlockNumbers = newChildBlockNumbers)
+        }
+
+        fun withRecordAndFollowingChildReplacedAt(
+            index: Int,
+            newRecord: DSStoreRecord,
+            newChildBlockNumber: Int
+        ): DSStoreNode {
+            val newRecords = records.toMutableList()
+            val newChildBlockNumbers = childNodeBlockNumbers.toMutableList()
+            newRecords[index] = newRecord
+            newChildBlockNumbers[index + 1] = newChildBlockNumber
+            return copy(records = newRecords, childNodeBlockNumbers = newChildBlockNumbers)
         }
     }
 }
