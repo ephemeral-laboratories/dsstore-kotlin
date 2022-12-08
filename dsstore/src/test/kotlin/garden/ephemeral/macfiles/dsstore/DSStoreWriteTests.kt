@@ -1,8 +1,6 @@
 package garden.ephemeral.macfiles.dsstore
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import assertk.assertions.isFailure
-import assertk.assertions.isInstanceOf
 import garden.ephemeral.macfiles.dsstore.types.IntPoint
 import garden.ephemeral.macfiles.dsstore.util.FileMode
 import org.junit.jupiter.api.io.TempDir
@@ -58,15 +56,32 @@ class DSStoreWriteTests {
     }
 
     @Test
-    fun `cannot write more than a page size of records`() {
+    fun `writing more than a page size of records`() {
         val file = temp.resolve("my.DS_Store")
         DSStore.open(file, FileMode.READ_WRITE).use { store ->
-            // Just guarding that this will throw instead of silently writing a too-large block
-            assertThat {
-                (1..100).forEach { n ->
-                    store.insertOrReplace(DSStoreRecord("file$n", DSStoreProperties.IconLocation, IntPoint(0, 0)))
-                }
-            }.isFailure().isInstanceOf(NotImplementedError::class)
+            (1..100).forEach { n ->
+                store.insertOrReplace(DSStoreRecord("file$n", DSStoreProperties.IconLocation, IntPoint(n, n)))
+            }
+        }
+        DSStore.open(file).use { store ->
+            (1..100).forEach { n ->
+                assertThat(store["file$n", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(n, n))
+            }
+        }
+    }
+
+    @Test
+    fun `writing more than a page size of records backwards`() {
+        val file = temp.resolve("my.DS_Store")
+        DSStore.open(file, FileMode.READ_WRITE).use { store ->
+            (100 downTo 1).forEach { n ->
+                store.insertOrReplace(DSStoreRecord("file$n", DSStoreProperties.IconLocation, IntPoint(n, n)))
+            }
+        }
+        DSStore.open(file).use { store ->
+            (1..100).forEach { n ->
+                assertThat(store["file$n", DSStoreProperties.IconLocation]).isEqualTo(IntPoint(n, n))
+            }
         }
     }
 }

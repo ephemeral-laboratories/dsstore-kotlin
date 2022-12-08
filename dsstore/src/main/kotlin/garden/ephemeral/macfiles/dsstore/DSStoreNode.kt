@@ -67,16 +67,60 @@ sealed class DSStoreNode {
             }
         }
 
+        /**
+         * Clones the node with one record replaced at the given index.
+         *
+         * @param index the index to replace.
+         * @param newRecord the new record to replace it with.
+         * @return the new node.
+         */
         fun withRecordReplacedAt(index: Int, newRecord: DSStoreRecord): Leaf {
             val recordsCopy = records.toMutableList()
             recordsCopy[index] = newRecord
             return copy(records = recordsCopy.toList())
         }
 
+        /**
+         * Clones the node with one additional record inserted at the given index.
+         *
+         * @param index the index to insert at.
+         * @param newRecord the new record to insert.
+         * @return the new node.
+         */
         fun withRecordInsertedAt(index: Int, newRecord: DSStoreRecord): Leaf {
             val recordsCopy = records.toMutableList()
             recordsCopy.add(index, newRecord)
             return copy(records = recordsCopy.toList())
+        }
+
+        /**
+         * Splits the node into two nodes with a pivot record.
+         * The returned nodes would end up in two new blocks, while the pivot record
+         * would be stored directly in the branch node.
+         *
+         * @return a triple containing:
+         *         - a node containing all the records before the pivot point
+         *         - a record at the pivot point
+         *         - a node containing all the records after the pivot point
+         */
+        fun split(): Triple<DSStoreNode, DSStoreRecord, DSStoreNode> {
+            // Finding a suitable pivot index
+            val totalSize = records.sumOf(DSStoreRecord::calculateSize)
+            val targetSize = totalSize / 2
+            var accumulatedSize = 0
+            // We know this always has to find some value, because the last record
+            // in the collection must bring the accumulated size to the total.
+            val (pivotIndex, pivot) = records.withIndex().find { (_, record) ->
+                val recordSize = record.calculateSize()
+                accumulatedSize += recordSize
+                accumulatedSize > targetSize
+            }!!
+
+            return Triple(
+                Leaf(records.slice(0..pivotIndex)),
+                pivot,
+                Leaf(records.slice(pivotIndex + 1 until records.size))
+            )
         }
     }
 
@@ -105,6 +149,12 @@ sealed class DSStoreNode {
             val recordsCopy = records.toMutableList()
             recordsCopy[index] = newRecord
             return copy(records = recordsCopy.toList())
+        }
+
+        fun withChildBlockNumberReplacedAt(index: Int, newChildBlockNumber: Int): Branch {
+            val newChildBlockNumbers = childNodeBlockNumbers.toMutableList()
+            newChildBlockNumbers[index] = newChildBlockNumber
+            return copy(childNodeBlockNumbers = newChildBlockNumbers)
         }
     }
 }

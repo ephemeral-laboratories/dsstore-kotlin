@@ -172,28 +172,56 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
                         // record < key, keep looking, no need to search the child node either
                     } else {
                         // comp > 0, record > key, search the previous child block and then stop looking
-                        TODO("What now?")
-                        // Beware - if it results in writing a new node, we have to update the current node!
-                        // return insertOrReplaceInner(node.childNodeBlockNumbers[index], newRecord)
+                        val newChildBlockNumber =
+                            insertOrReplaceInner(node.childNodeBlockNumbers[index], newRecord, defunctBlocks)
+                        // XXX: Slightly less than great thing here - if the child block was a newly-created
+                        //      branch which will only have 2 children, that whole branch might fit inside the
+                        //      current branch. So here, we could try to merge the two. It isn't required to
+                        //      get a working file.
+                        val newNode = node.withChildBlockNumberReplacedAt(index, newChildBlockNumber)
+                        return updateNode(newNode, blockNumber, defunctBlocks)
                     }
                 }
                 // If we're still going by this point we have to search the right-most node still
-                TODO("What now?")
-                // Beware - if it results in writing a new node, we have to update the current node!
-                // return insertOrReplaceInner(node.childNodeBlockNumbers.last(), newRecord)
+                val newChildBlockNumber =
+                    insertOrReplaceInner(node.childNodeBlockNumbers.last(), newRecord, defunctBlocks)
+                val newNode = node.withChildBlockNumberReplacedAt(node.records.size, newChildBlockNumber)
+                return updateNode(newNode, blockNumber, defunctBlocks)
             }
         }
     }
 
-    private fun updateNode(newNode: DSStoreNode, existingBlockNumber: Int, defunctBlocks: MutableList<Int>): Int {
+    private fun updateNode(newNodeIn: DSStoreNode, existingBlockNumber: Int, defunctBlocks: MutableList<Int>): Int {
+        var newNode = newNodeIn
         val newNodeSize = newNode.calculateSize()
         if (newNodeSize > superBlock.pageSize) {
-            TODO("Node size would exceed page size, splitting nodes is not yet implemented")
+            when (newNode) {
+                is DSStoreNode.Leaf -> {
+                    val (nodeBefore, pivot, nodeAfter) = newNode.split()
+                    val nodeBeforeBlockNumber = writeNode(nodeBefore)
+                    val nodeAfterBlockNumber = writeNode(nodeAfter)
+                    newNode = DSStoreNode.Branch(
+                        records = listOf(pivot),
+                        childNodeBlockNumbers = listOf(nodeBeforeBlockNumber, nodeAfterBlockNumber)
+                    )
+                }
+
+                is DSStoreNode.Branch ->
+                    TODO("Node size would exceed page size, splitting branch nodes is not yet implemented")
+            }
         }
-        val newNodeBlock = Block.create(newNodeSize) { stream -> newNode.writeTo(stream) }
-        val newBlockNumber = buddyFile.allocateAndWriteBlock(newNodeBlock)
+        val newBlockNumber = writeNode(newNode)
         defunctBlocks.add(existingBlockNumber)
         return newBlockNumber
+    }
+
+    private fun writeNode(newNode: DSStoreNode): Int {
+        val newNodeSize = newNode.calculateSize()
+        require(newNodeSize <= superBlock.pageSize) {
+            "Node size ($newNodeSize) exceeds page size (${superBlock.pageSize})"
+        }
+        val newNodeBlock = Block.create(newNodeSize) { stream -> newNode.writeTo(stream) }
+        return buddyFile.allocateAndWriteBlock(newNodeBlock)
     }
 
     private fun updateSuperBlock(modification: (DSStoreSuperBlock) -> DSStoreSuperBlock) {
