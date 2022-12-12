@@ -32,8 +32,8 @@ class AliasReadTests {
                     fsId = "\u0000\u0000",
                 ),
                 targetInfo = TargetInfo(
+                    name = "Test file.txt",
                     kind = Kind.FILE,
-                    filename = "Test file.txt",
                     folderCnid = 2U,
                     cnid = 147U,
                     creationDate = Instant.parse("2022-12-12T23:13:54Z"),
@@ -63,8 +63,8 @@ class AliasReadTests {
                     fsId = "\u0000\u0000",
                 ),
                 targetInfo = TargetInfo(
+                    name = "Test folder",
                     kind = Kind.FOLDER,
-                    filename = "Test folder",
                     folderCnid = 2U,
                     cnid = 143U,
                     creationDate = Instant.parse("2022-12-12T23:13:23Z"),
@@ -94,8 +94,8 @@ class AliasReadTests {
                     fsId = "\u0000\u0000",
                 ),
                 targetInfo = TargetInfo(
+                    name = "Mac Test",
                     kind = Kind.FOLDER,
-                    filename = "Mac Test",
                     folderCnid = 1U,
                     cnid = 2U,
                     creationDate = Instant.parse("2022-12-12T23:13:02Z"),

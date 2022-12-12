@@ -26,7 +26,7 @@ data class AliasRecordV3(
 
     override fun deriveTargetInfo() = TargetInfo.Builder(
         kind = Kind.forValue(kind),
-        filename = "",
+        name = "",
         folderCnid = folderCnid,
         cnid = cnid,
         creationDate = MacTimeUtils.decodeHighResInstant(creationDateHighRes)

@@ -6,8 +6,8 @@ import java.time.Instant
 /**
  * Holds information about the target filesystem entry.
  *
+ * @property name the filename of the target.
  * @property kind the kind of entry the alias points to.
- * @property filename the filename of the target.
  * @property folderCnid the CNID (Catalog Node ID) of the target's containing folder.
  * @property cnid the CNID (Catalog Node ID) of the target.
  * @property creationDate the target's creation date.
@@ -25,8 +25,8 @@ import java.time.Instant
  *           the number of folders deep that we go before we get to that home folder.
  */
 data class TargetInfo(
+    val name: String,
     val kind: Kind,
-    val filename: String,
     val folderCnid: UInt,
     val cnid: UInt,
     val creationDate: Instant,
@@ -41,8 +41,8 @@ data class TargetInfo(
     val userHomePrefixLen: Short? = null,
 ) {
     class Builder(
+        var name: String,
         val kind: Kind,
-        var filename: String,
         val folderCnid: UInt,
         val cnid: UInt,
         var creationDate: Instant,
@@ -57,7 +57,7 @@ data class TargetInfo(
         var userHomePrefixLen: Short? = null,
     ) {
         fun build() = TargetInfo(
-            kind, filename, folderCnid, cnid, creationDate, creatorCode, typeCode,
+            name, kind, folderCnid, cnid, creationDate, creatorCode, typeCode,
             levelsFrom, levelsTo, folderName, cnidPath, carbonPath, posixPath, userHomePrefixLen
         )
     }

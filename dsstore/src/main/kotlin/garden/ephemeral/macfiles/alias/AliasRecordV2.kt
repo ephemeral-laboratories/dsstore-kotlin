@@ -35,7 +35,7 @@ class AliasRecordV2(
 
     override fun deriveTargetInfo() = TargetInfo.Builder(
         kind = Kind.forValue(kind),
-        filename = filename.replace("/", ":"),
+        name = filename.replace("/", ":"),
         folderCnid = folderCnid,
         cnid = cnid,
         creationDate = MacTimeUtils.decodeLowResInstant(creationDate),

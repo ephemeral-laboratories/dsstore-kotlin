@@ -257,7 +257,7 @@ data class Alias(
                     Tag.DIALUP_INFO -> alias.volumeInfo.dialupInfo = stream.readBlob(length)
                     Tag.UNICODE_FILENAME -> {
                         stream.skip(2)
-                        alias.targetInfo.filename = stream.readString(length - 2, StandardCharsets.UTF_16BE)
+                        alias.targetInfo.name = stream.readString(length - 2, StandardCharsets.UTF_16BE)
                     }
                     Tag.UNICODE_VOLUME_NAME -> {
                         stream.skip(2)
