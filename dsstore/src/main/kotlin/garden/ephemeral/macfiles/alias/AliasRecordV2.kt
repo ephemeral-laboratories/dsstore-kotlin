@@ -2,6 +2,7 @@ package garden.ephemeral.macfiles.alias
 
 import garden.ephemeral.macfiles.common.MacTimeUtils
 import garden.ephemeral.macfiles.common.io.DataInput
+import garden.ephemeral.macfiles.common.io.DataOutput
 import garden.ephemeral.macfiles.common.types.Blob
 import garden.ephemeral.macfiles.common.types.FourCC
 import java.nio.charset.StandardCharsets
@@ -16,12 +17,12 @@ class AliasRecordV2(
     val filename: String,
     val cnid: UInt,
     val creationDate: UInt,
-    val creatorCode: FourCC,
-    val typeCode: FourCC,
+    val creatorCode: FourCC?,
+    val typeCode: FourCC?,
     val levelsFrom: Short,
     val levelsTo: Short,
     val volumeAttributes: UInt,
-    val volFsId: String,
+    val volFsId: String?,
     val reserved: Blob,
 ) : AliasRecord {
     override fun deriveVolumeInfo() = VolumeInfo.Builder(
@@ -43,22 +44,43 @@ class AliasRecordV2(
         typeCode = typeCode
     )
 
+    override fun writeTo(stream: DataOutput) {
+        stream.writeShort(kind)
+        stream.writePascalString(28, volName, StandardCharsets.UTF_8)
+        stream.writeInt(volDate)
+        stream.writeString(2, fsType, StandardCharsets.UTF_8)
+        stream.writeShort(diskType)
+        stream.writeInt(folderCnid)
+        stream.writePascalString(64, filename, StandardCharsets.UTF_8)
+        stream.writeInt(cnid)
+        stream.writeInt(creationDate)
+        stream.writeFourCC(creatorCode ?: FourCC.ZERO)
+        stream.writeFourCC(typeCode ?: FourCC.ZERO)
+        stream.writeShort(levelsFrom)
+        stream.writeShort(levelsTo)
+        stream.writeInt(volumeAttributes)
+        stream.writeString(2, volFsId ?: "", StandardCharsets.UTF_8)
+        stream.writeBlob(reserved)
+    }
+
     companion object {
+        const val SIZE = 142
+
         fun readFrom(stream: DataInput): AliasRecordV2 {
             val kind = stream.readShort()
             val volName = stream.readPascalString(28, StandardCharsets.UTF_8)
-            val volDate = stream.readInt().toUInt()
+            val volDate = stream.readUInt()
             val fsType = stream.readString(2, StandardCharsets.UTF_8)
             val diskType = stream.readShort()
-            val folderCnid = stream.readInt().toUInt()
+            val folderCnid = stream.readUInt()
             val filename = stream.readPascalString(64, StandardCharsets.UTF_8)
-            val cnid = stream.readInt().toUInt()
-            val creationDate = stream.readInt().toUInt()
+            val cnid = stream.readUInt()
+            val creationDate = stream.readUInt()
             val creatorCode = stream.readFourCC()
             val typeCode = stream.readFourCC()
             val levelsFrom = stream.readShort()
             val levelsTo = stream.readShort()
-            val volAttrs = stream.readInt().toUInt()
+            val volAttrs = stream.readUInt()
             val volFsId = stream.readString(2, StandardCharsets.UTF_8)
             val reserved = stream.readBlob(10)
             return AliasRecordV2(
@@ -66,5 +88,24 @@ class AliasRecordV2(
                 creationDate, creatorCode, typeCode, levelsFrom, levelsTo, volAttrs, volFsId, reserved
             )
         }
+
+        fun forAlias(alias: Alias) = AliasRecordV2(
+            kind = alias.target.kind.value,
+            volName = alias.volume.name.replace(':', '/'),
+            volDate = MacTimeUtils.encodeLowResInstant(alias.volume.creationDate),
+            fsType = alias.volume.fsType,
+            diskType = alias.volume.diskType.value,
+            folderCnid = alias.target.folderCnid,
+            filename = alias.target.name.replace(':', '/'),
+            cnid = alias.target.cnid,
+            creationDate = MacTimeUtils.encodeLowResInstant(alias.target.creationDate),
+            creatorCode = alias.target.creatorCode,
+            typeCode = alias.target.typeCode,
+            levelsFrom = alias.target.levelsFrom,
+            levelsTo = alias.target.levelsTo,
+            volumeAttributes = alias.volume.attributeFlags,
+            volFsId = alias.volume.fsId,
+            reserved = Blob.zeroes(10)
+        )
     }
 }

@@ -1,6 +1,6 @@
 package garden.ephemeral.macfiles.alias
 
-enum class VolumeType(val value: Int) {
+enum class VolumeType(val value: Short) {
     FIXED_DISK(0),
     NETWORK_DISK(1),
     FLOPPY_DISK_400KB(2),
@@ -15,7 +15,7 @@ enum class VolumeType(val value: Int) {
         }
 
         fun forValue(value: Short): VolumeType {
-            return byValue[value.toInt()] ?: throw IllegalArgumentException("Unrecognised value: $value")
+            return byValue[value] ?: throw IllegalArgumentException("Unrecognised value: $value")
         }
     }
 }

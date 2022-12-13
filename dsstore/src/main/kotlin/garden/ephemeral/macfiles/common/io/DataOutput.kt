@@ -10,6 +10,20 @@ import java.nio.charset.Charset
 interface DataOutput {
 
     /**
+     * Gets the position of the stream.
+     *
+     * @return the position.
+     */
+    fun position(): Int
+
+    /**
+     * Sets the position of the stream. (i.e., seeks.)
+     *
+     * @param position the new position.
+     */
+    fun position(position: Int)
+
+    /**
      * Skips the given number of bytes.
      *
      * @param byteCount the number of bytes to skip.
@@ -24,11 +38,25 @@ interface DataOutput {
     fun writeByte(value: Byte)
 
     /**
+     * Writes a 2-byte big endian integer.
+     *
+     * @param value the short.
+     */
+    fun writeShort(value: Short)
+
+    /**
      * Writes a 4-byte big endian integer.
      *
      * @param value the int.
      */
     fun writeInt(value: Int)
+
+    /**
+     * Writes a 4-byte big endian unsigned integer.
+     *
+     * @param value the int.
+     */
+    fun writeInt(value: UInt)
 
     /**
      * Writes an 8-byte big endian integer.
@@ -65,4 +93,23 @@ interface DataOutput {
      * @param charset the charset to use to encode the string.
      */
     fun writeString(value: String, charset: Charset)
+
+    /**
+     * Writes a string. The string is padded out to the given length with null bytes.
+     *
+     * @param length the length to write.
+     * @param value the string.
+     * @param charset the charset to use to encode the string.
+     */
+    fun writeString(length: Int, value: String, charset: Charset)
+
+    /**
+     * Writes a "Pascal string". The first byte written is the length of the string,
+     * and the string is padded out to the given length with null bytes.
+     *
+     * @param length the length to write.
+     * @param value the string to write.
+     * @param charset the charset to use to encode the string.
+     */
+    fun writePascalString(length: Int, value: String, charset: Charset)
 }

@@ -11,6 +11,14 @@ import java.nio.charset.StandardCharsets
  * Adapts a [ByteBuffer] as a [DataOutput].
  */
 class ByteBufferDataOutput(private val buffer: ByteBuffer) : DataOutput {
+    override fun position(): Int {
+        return buffer.position()
+    }
+
+    override fun position(position: Int) {
+        buffer.position(position)
+    }
+
     override fun skip(byteCount: Int) {
         requireAvailable(byteCount)
         buffer.position(buffer.position() + byteCount)
@@ -21,10 +29,17 @@ class ByteBufferDataOutput(private val buffer: ByteBuffer) : DataOutput {
         buffer.put(value)
     }
 
+    override fun writeShort(value: Short) {
+        requireAvailable(2)
+        buffer.putShort(value)
+    }
+
     override fun writeInt(value: Int) {
         requireAvailable(4)
         buffer.putInt(value)
     }
+
+    override fun writeInt(value: UInt) = writeInt(value.toInt())
 
     override fun writeLong(value: Long) {
         requireAvailable(8)
@@ -46,6 +61,23 @@ class ByteBufferDataOutput(private val buffer: ByteBuffer) : DataOutput {
 
     override fun writeString(value: String, charset: Charset) {
         writeArray(value.toByteArray(charset))
+    }
+
+    override fun writeString(length: Int, value: String, charset: Charset) {
+        var array = value.toByteArray(charset)
+        array = array.copyOf(length)
+        writeArray(array)
+    }
+
+    override fun writePascalString(length: Int, value: String, charset: Charset) {
+        var array = value.toByteArray(charset)
+        if (array.size > length - 1) {
+            array = array.copyOf(length - 1)
+        }
+        val valueLength = array.size
+        array = array.copyOf(length - 1)
+        writeByte(valueLength.toByte())
+        writeArray(array)
     }
 
     private fun writeArray(array: ByteArray) {

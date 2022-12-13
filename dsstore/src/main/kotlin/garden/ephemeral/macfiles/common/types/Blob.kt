@@ -37,7 +37,16 @@ class Blob(data: ByteArray) {
         return data.contentHashCode()
     }
 
-    override fun toString(): String {
-        return data.contentToString()
+    override fun toString() = data.asSequence()
+        .chunked(16)
+        .map { row ->
+            val hexColumn = row.joinToString(" ") { b -> b.toUByte().toString(16).padStart(2, '0') }
+            val asciiColumn = row.joinToString("") { b -> if (b in 32..126) b.toInt().toChar().toString() else "." }
+            hexColumn.padEnd(49, ' ') + asciiColumn
+        }
+        .joinToString(System.lineSeparator())
+
+    companion object {
+        fun zeroes(size: Int) = Blob(ByteArray(size))
     }
 }

@@ -38,6 +38,13 @@ interface DataInput {
     fun readInt(): Int
 
     /**
+     * Reads a 4-byte big endian unsigned integer.
+     *
+     * @return the uint.
+     */
+    fun readUInt(): UInt
+
+    /**
      * Reads an 8-byte big endian integer.
      *
      * @return the long.

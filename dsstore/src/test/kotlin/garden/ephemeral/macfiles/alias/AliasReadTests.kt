@@ -23,15 +23,16 @@ class AliasReadTests {
             Alias(
                 appInfo = FourCC.ZERO,
                 version = 2,
-                volumeInfo = VolumeInfo(
+                volume = VolumeInfo(
                     name = "Mac Test",
                     creationDate = Instant.parse("2022-12-12T23:13:02Z"),
                     fsType = "H+",
                     diskType = VolumeType.FIXED_DISK,
                     attributeFlags = 0U,
                     fsId = "\u0000\u0000",
+                    posixPath = "/Volumes/Mac Test"
                 ),
-                targetInfo = TargetInfo(
+                target = TargetInfo(
                     name = "Test file.txt",
                     kind = Kind.FILE,
                     folderCnid = 2U,
@@ -41,7 +42,7 @@ class AliasReadTests {
                     typeCode = FourCC.ZERO,
                     folderName = "Mac Test",
                     carbonPath = "Mac Test:Test file.txt",
-                    posixPath = "/Volumes/Mac Test"
+                    posixPath = "/Test file.txt"
                 )
             )
         )
@@ -54,15 +55,16 @@ class AliasReadTests {
             Alias(
                 appInfo = FourCC.ZERO,
                 version = 2,
-                volumeInfo = VolumeInfo(
+                volume = VolumeInfo(
                     name = "Mac Test",
                     creationDate = Instant.parse("2022-12-12T23:13:02Z"),
                     fsType = "H+",
                     diskType = VolumeType.FIXED_DISK,
                     attributeFlags = 0U,
                     fsId = "\u0000\u0000",
+                    posixPath = "/Volumes/Mac Test"
                 ),
-                targetInfo = TargetInfo(
+                target = TargetInfo(
                     name = "Test folder",
                     kind = Kind.FOLDER,
                     folderCnid = 2U,
@@ -72,7 +74,7 @@ class AliasReadTests {
                     typeCode = FourCC.ZERO,
                     folderName = "Mac Test",
                     carbonPath = "Mac Test:Test folder",
-                    posixPath = "/Volumes/Mac Test"
+                    posixPath = "/Test folder"
                 )
             )
         )
@@ -85,15 +87,16 @@ class AliasReadTests {
             Alias(
                 appInfo = FourCC.ZERO,
                 version = 2,
-                volumeInfo = VolumeInfo(
+                volume = VolumeInfo(
                     name = "Mac Test",
                     creationDate = Instant.parse("2022-12-12T23:13:02Z"),
                     fsType = "H+",
                     diskType = VolumeType.FIXED_DISK,
                     attributeFlags = 0U,
                     fsId = "\u0000\u0000",
+                    posixPath = "/Volumes/Mac Test"
                 ),
-                targetInfo = TargetInfo(
+                target = TargetInfo(
                     name = "Mac Test",
                     kind = Kind.FOLDER,
                     folderCnid = 1U,
@@ -103,7 +106,7 @@ class AliasReadTests {
                     typeCode = FourCC.ZERO,
                     folderName = "Volumes",
                     carbonPath = "Mac Test:.",
-                    posixPath = "/Volumes/Mac Test"
+                    posixPath = "/."
                 )
             )
         )

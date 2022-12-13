@@ -1,6 +1,6 @@
 package garden.ephemeral.macfiles.alias
 
-enum class Kind(var value: Int) {
+enum class Kind(var value: Short) {
     FILE(0),
     FOLDER(1),
     ;
@@ -11,7 +11,7 @@ enum class Kind(var value: Int) {
         }
 
         fun forValue(value: Short): Kind {
-            return byValue[value.toInt()] ?: throw IllegalArgumentException("Unrecognised value: $value")
+            return byValue[value] ?: throw IllegalArgumentException("Unrecognised value: $value")
         }
     }
 }

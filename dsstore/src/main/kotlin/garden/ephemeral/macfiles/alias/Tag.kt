@@ -1,6 +1,6 @@
 package garden.ephemeral.macfiles.alias
 
-enum class Tag(var value: Int) {
+enum class Tag(var value: Short) {
     CARBON_FOLDER_NAME(0),
     CNID_PATH(1),
     CARBON_PATH(2),
@@ -25,6 +25,6 @@ enum class Tag(var value: Int) {
             Tag.values().associateBy(Tag::value)
         }
 
-        fun findForValue(value: Short) = byValue[value.toInt()]
+        fun findForValue(value: Short) = byValue[value]
     }
 }

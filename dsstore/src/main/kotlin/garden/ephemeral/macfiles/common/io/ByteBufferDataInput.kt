@@ -31,6 +31,8 @@ class ByteBufferDataInput(private val buffer: ByteBuffer) : DataInput {
         return buffer.int
     }
 
+    override fun readUInt() = readInt().toUInt()
+
     override fun readLong(): Long {
         requireAvailable(8)
         return buffer.long

@@ -1,221 +1,269 @@
 package garden.ephemeral.macfiles.alias
 
 import garden.ephemeral.macfiles.common.MacTimeUtils
+import garden.ephemeral.macfiles.common.io.Block
 import garden.ephemeral.macfiles.common.io.DataInput
 import garden.ephemeral.macfiles.common.io.DataOutput
 import garden.ephemeral.macfiles.common.types.Blob
 import garden.ephemeral.macfiles.common.types.FourCC
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 
 /**
  * Representation of a macOS Alias file.
  *
  * @param appInfo application-specific information.
  * @param version the alias format version (we support versions 2 and 3).
- * @param volumeInfo info about the target's volume.
- * @param targetInfo info about the target.
+ * @param volume info about the target's volume.
+ * @param target info about the target.
  * @param unrecognised a list of extra tags we didn't recognise.
  */
 data class Alias(
     val appInfo: FourCC,
     val version: Short,
-    val volumeInfo: VolumeInfo?,
-    val targetInfo: TargetInfo?,
+    val volume: VolumeInfo,
+    val target: TargetInfo,
     val unrecognised: List<Pair<Short, Blob>> = listOf()
 ) {
+    fun toBlob() = Block.create(calculateSize(), ::writeTo).toBlob()
+
     fun writeTo(stream: DataOutput) {
-        TODO("Write support")
-        /*
-        # We'll come back and fix the length when we're done
-        pos = b.tell()
-        b.write(struct.pack(b">4shh", self.appinfo, 0, self.version))
+        // We'll come back and fix the length when we're done
+        val startPosition = stream.position()
+        AliasHeader(appInfo, 0, version).writeTo(stream)
 
-        carbon_volname = encode_utf8(self.volume.name).replace(b":", b"/")
-        carbon_filename = encode_utf8(self.target.filename).replace(b":", b"/")
-        voldate = (self.volume.creation_date - mac_epoch).total_seconds()
-        crdate = (self.target.creation_date - mac_epoch).total_seconds()
+        val aliasRecord = if (version == 2.toShort()) {
+            AliasRecordV2.forAlias(this)
+        } else { // version 3
+            AliasRecordV3.forAlias(this)
+        }
+        aliasRecord.writeTo(stream)
 
-        if self.version == 2:
-            # NOTE: crdate should be in local time, but that's system dependent
-            #       (so doing so is ridiculous, and nothing could rely on it).
-            b.write(
-                struct.pack(
-                    b">h28pI2shI64pII4s4shhI2s10s",
-                    self.target.kind,  # h
-                    carbon_volname,  # 28p
-                    int(voldate),  # I
-                    self.volume.fs_type,  # 2s
-                    self.volume.disk_type,  # h
-                    self.target.folder_cnid,  # I
-                    carbon_filename,  # 64p
-                    self.target.cnid,  # I
-                    int(crdate),  # I
-                    self.target.creator_code,  # 4s
-                    self.target.type_code,  # 4s
-                    self.target.levels_from,  # h
-                    self.target.levels_to,  # h
-                    self.volume.attribute_flags,  # I
-                    self.volume.fs_id,  # 2s
-                    b"\0" * 10,  # 10s
-                )
-            )
-        else:
-            b.write(
-                struct.pack(
-                    b">hQ4shIIQI14s",
-                    self.target.kind,  # h
-                    int(voldate * 65536),  # Q
-                    self.volume.fs_type,  # 4s
-                    self.volume.disk_type,  # h
-                    self.target.folder_cnid,  # I
-                    self.target.cnid,  # I
-                    int(crdate * 65536),  # Q
-                    self.volume.attribute_flags,  # I
-                    b"\0" * 14,  # 14s
-                )
-            )
+        // Excuse the odd order; we're copying Finder
 
-        # Excuse the odd order; we're copying Finder
-        if self.target.folder_name:
-            carbon_foldername = encode_utf8(self.target.folder_name).replace(b":", b"/")
-            b.write(struct.pack(b">hh", TAG_CARBON_FOLDER_NAME, len(carbon_foldername)))
-            b.write(carbon_foldername)
-            if len(carbon_foldername) & 1:
-                b.write(b"\0")
+        target.folderName?.let { folderName ->
+            writeRecord(stream, Tag.CARBON_FOLDER_NAME, folderName.replace(':', '/'))
+        }
 
-        b.write(
-            struct.pack(
-                b">hhQhhQ",
-                TAG_HIGH_RES_VOLUME_CREATION_DATE,
-                8,
-                int(voldate * 65536),
-                TAG_HIGH_RES_CREATION_DATE,
-                8,
-                int(crdate * 65536),
-            )
-        )
+        writeRecord(stream, Tag.HIGH_RES_VOLUME_CREATION_DATE, volume.creationDate)
+        writeRecord(stream, Tag.HIGH_RES_CREATION_DATE, target.creationDate)
 
-        if self.target.cnid_path:
-            cnid_path = struct.pack(
-                ">%uI" % len(self.target.cnid_path), *self.target.cnid_path
-            )
-            b.write(struct.pack(b">hh", TAG_CNID_PATH, len(cnid_path)))
-            b.write(cnid_path)
+        // TAG_CNID_PATH
+        target.cnidPath?.let { cnidPath ->
+            stream.writeShort(Tag.CNID_PATH.value)
+            stream.writeShort((4 * cnidPath.size).toShort())
+            cnidPath.forEach(stream::writeInt)
+        }
 
-        if self.target.carbon_path:
-            carbon_path = encode_utf8(self.target.carbon_path)
-            b.write(struct.pack(b">hh", TAG_CARBON_PATH, len(carbon_path)))
-            b.write(carbon_path)
-            if len(carbon_path) & 1:
-                b.write(b"\0")
+        target.carbonPath?.let { carbonPath ->
+            writeRecord(stream, Tag.CARBON_PATH, carbonPath)
+        }
 
-        if self.volume.appleshare_info:
-            ai = self.volume.appleshare_info
-            if ai.zone:
-                b.write(struct.pack(b">hh", TAG_APPLESHARE_ZONE, len(ai.zone)))
-                b.write(ai.zone)
-                if len(ai.zone) & 1:
-                    b.write(b"\0")
-            if ai.server:
-                b.write(struct.pack(b">hh", TAG_APPLESHARE_SERVER_NAME, len(ai.server)))
-                b.write(ai.server)
-                if len(ai.server) & 1:
-                    b.write(b"\0")
-            if ai.username:
-                b.write(struct.pack(b">hh", TAG_APPLESHARE_USERNAME, len(ai.username)))
-                b.write(ai.username)
-                if len(ai.username) & 1:
-                    b.write(b"\0")
+        volume.appleShareInfo?.let { appleShareInfo ->
+            appleShareInfo.zone?.let { zone ->
+                writeRecord(stream, Tag.APPLESHARE_ZONE, zone)
+            }
+            appleShareInfo.zone?.let { server ->
+                writeRecord(stream, Tag.APPLESHARE_SERVER_NAME, server)
+            }
+            appleShareInfo.zone?.let { username ->
+                writeRecord(stream, Tag.APPLESHARE_USERNAME, username)
+            }
+        }
 
-        if self.volume.driver_name:
-            driver_name = encode_utf8(self.volume.driver_name)
-            b.write(struct.pack(b">hh", TAG_DRIVER_NAME, len(driver_name)))
-            b.write(driver_name)
-            if len(driver_name) & 1:
-                b.write(b"\0")
+        volume.driverName?.let { driverName ->
+            writeRecord(stream, Tag.DRIVER_NAME, driverName)
+        }
 
-        if self.volume.network_mount_info:
-            b.write(
-                struct.pack(
-                    b">hh", TAG_NETWORK_MOUNT_INFO, len(self.volume.network_mount_info)
-                )
-            )
-            b.write(self.volume.network_mount_info)
-            if len(self.volume.network_mount_info) & 1:
-                b.write(b"\0")
+        volume.networkMountInfo?.let { networkMountInfo ->
+            writeRecord(stream, Tag.NETWORK_MOUNT_INFO, networkMountInfo)
+        }
 
-        if self.volume.dialup_info:
-            b.write(
-                struct.pack(
-                    b">hh", TAG_DIALUP_INFO, len(self.volume.network_mount_info)
-                )
-            )
-            b.write(self.volume.network_mount_info)
-            if len(self.volume.network_mount_info) & 1:
-                b.write(b"\0")
+        volume.dialupInfo?.let { dialupInfo ->
+            writeRecord(stream, Tag.DIALUP_INFO, dialupInfo)
+        }
 
-        utf16 = decode_utf8(self.target.filename).replace(":", "/").encode("utf-16-be")
-        b.write(
-            struct.pack(b">hhh", TAG_UNICODE_FILENAME, len(utf16) + 2, len(utf16) // 2)
-        )
-        b.write(utf16)
+        writeUStrRecord(stream, Tag.UNICODE_FILENAME, target.name)
 
-        utf16 = decode_utf8(self.volume.name).replace(":", "/").encode("utf-16-be")
-        b.write(
-            struct.pack(
-                b">hhh", TAG_UNICODE_VOLUME_NAME, len(utf16) + 2, len(utf16) // 2
-            )
-        )
-        b.write(utf16)
+        writeUStrRecord(stream, Tag.UNICODE_VOLUME_NAME, volume.name)
 
-        if self.target.posix_path:
-            posix_path = encode_utf8(self.target.posix_path)
-            b.write(struct.pack(b">hh", TAG_POSIX_PATH, len(posix_path)))
-            b.write(posix_path)
-            if len(posix_path) & 1:
-                b.write(b"\0")
+        target.posixPath?.let { posixPath ->
+            writeRecord(stream, Tag.POSIX_PATH, posixPath)
+        }
 
-        if self.volume.posix_path:
-            posix_path = encode_utf8(self.volume.posix_path)
-            b.write(struct.pack(b">hh", TAG_POSIX_PATH_TO_MOUNTPOINT, len(posix_path)))
-            b.write(posix_path)
-            if len(posix_path) & 1:
-                b.write(b"\0")
+        volume.posixPath?.let { posixPath ->
+            writeRecord(stream, Tag.POSIX_PATH_TO_MOUNTPOINT, posixPath)
+        }
 
-        if self.volume.disk_image_alias:
-            d = self.volume.disk_image_alias.to_bytes()
-            b.write(struct.pack(b">hh", TAG_RECURSIVE_ALIAS_OF_DISK_IMAGE, len(d)))
-            b.write(d)
-            if len(d) & 1:
-                b.write(b"\0")
+        volume.diskImageAlias?.let { diskImageAlias ->
+            writeRecord(stream, Tag.RECURSIVE_ALIAS_OF_DISK_IMAGE, diskImageAlias.toBlob())
+        }
 
-        if self.target.user_home_prefix_len is not None:
-            b.write(
-                struct.pack(
-                    b">hhh",
-                    TAG_USER_HOME_LENGTH_PREFIX,
-                    2,
-                    self.target.user_home_prefix_len,
-                )
-            )
+        target.userHomePrefixLen?.let { userHomePrefixLen ->
+            stream.writeShort(Tag.USER_HOME_LENGTH_PREFIX.value)
+            stream.writeShort(2)
+            stream.writeShort(userHomePrefixLen)
+        }
 
-        for t, v in self.extra:
-            b.write(struct.pack(b">hh", t, len(v)))
-            b.write(v)
-            if len(v) & 1:
-                b.write(b"\0")
+        unrecognised.forEach { (tag, blob) ->
+            val blobSize = blob.size
+            stream.writeShort(tag)
+            stream.writeShort(blobSize.toShort())
+            stream.writeBlob(blob)
+            if (blobSize % 2 != 0) {
+                stream.skip(1)
+            }
+        }
 
-        b.write(struct.pack(b">hh", -1, 0))
+        // end of records marker
+        stream.writeShort(-1)
+        stream.writeShort(0)
 
-        blen = b.tell() - pos
-        b.seek(pos + 4, os.SEEK_SET)
-        b.write(struct.pack(b">h", blen))
-
-
-     */
+        // fix length at start
+        val endPosition = stream.position()
+        val totalSize = endPosition - startPosition
+        stream.position(startPosition + 4)
+        stream.writeShort(totalSize.toShort())
+        stream.position(endPosition)
     }
 
+    fun calculateSize(): Int {
+        var size = AliasHeader.SIZE
+
+        size += if (version == 2.toShort()) {
+            AliasRecordV2.SIZE
+        } else { // version 3
+            AliasRecordV3.SIZE
+        }
+
+        // TAG_CARBON_FOLDER_NAME
+        target.folderName?.let { folderName ->
+            size += calculateStringRecordSize(folderName)
+        }
+
+        // TAG_HIGH_RES_VOLUME_CREATION_DATE + TAG_HIGH_RES_CREATION_DATE
+        size += 24
+
+        // TAG_CNID_PATH
+        target.cnidPath?.let { cnidPath ->
+            size = 4 + 4 * cnidPath.size
+        }
+
+        // TAG_CARBON_PATH
+        target.carbonPath?.let { carbonPath ->
+            size += calculateStringRecordSize(carbonPath)
+        }
+
+        volume.appleShareInfo?.let { appleShareInfo ->
+            // TAG_APPLESHARE_ZONE
+            appleShareInfo.zone?.let { zone ->
+                size += calculateStringRecordSize(zone)
+            }
+            // TAG_APPLESHARE_SERVER_NAME
+            appleShareInfo.zone?.let { server ->
+                size += calculateStringRecordSize(server)
+            }
+            // TAG_APPLESHARE_USERNAME
+            appleShareInfo.zone?.let { username ->
+                size += calculateStringRecordSize(username)
+            }
+        }
+
+        // TAG_DRIVER_NAME
+        volume.driverName?.let { driverName ->
+            size += calculateStringRecordSize(driverName)
+        }
+
+        // TAG_NETWORK_MOUNT_INFO
+        volume.networkMountInfo?.let { networkMountInfo ->
+            size += calculateBlobRecordSize(networkMountInfo)
+        }
+
+        // TAG_DIALUP_INFO
+        volume.dialupInfo?.let { dialupInfo ->
+            size += calculateBlobRecordSize(dialupInfo)
+        }
+
+        // TAG_UNICODE_FILENAME
+        size += 6 + target.name.length * 2
+
+        // TAG_UNICODE_VOLUME_NAME
+        size += 6 + volume.name.length * 2
+
+        // TAG_POSIX_PATH
+        target.posixPath?.let { posixPath ->
+            size += calculateStringRecordSize(posixPath)
+        }
+
+        // TAG_POSIX_PATH_TO_MOUNTPOINT
+        volume.posixPath?.let { posixPath ->
+            size += calculateStringRecordSize(posixPath)
+        }
+
+        // TAG_RECURSIVE_ALIAS_OF_DISK_IMAGE
+        volume.diskImageAlias?.let { diskImageAlias ->
+            val diskImageAliasSize = diskImageAlias.calculateSize()
+            size += 4 + diskImageAliasSize
+            if (diskImageAliasSize % 2 != 0) {
+                size++
+            }
+        }
+
+        // TAG_USER_HOME_LENGTH_PREFIX
+        if (target.userHomePrefixLen != null) {
+            size += 6
+        }
+
+        unrecognised.forEach { (_, blob) ->
+            size += calculateBlobRecordSize(blob)
+        }
+
+        // end marker
+        size += 4
+
+        return size
+    }
+
+    private fun writeRecord(stream: DataOutput, tag: Tag, value: String) {
+        val valueBytes = value.toByteArray()
+        stream.writeShort(tag.value)
+        stream.writeShort(valueBytes.size.toShort())
+        stream.writeString(valueBytes.size, value, StandardCharsets.UTF_8)
+        if (valueBytes.size % 2 != 0) {
+            stream.skip(1)
+        }
+    }
+
+    private fun writeUStrRecord(stream: DataOutput, tag: Tag, value: String) {
+        stream.writeShort(tag.value)
+        stream.writeShort((value.length * 2 + 2).toShort())
+        stream.writeShort(value.length.toShort())
+        stream.writeString(value, StandardCharsets.UTF_16BE)
+    }
+
+    private fun writeRecord(stream: DataOutput, tag: Tag, value: Blob) {
+        val valueSize = value.size
+        stream.writeShort(tag.value)
+        stream.writeShort(valueSize.toShort())
+        stream.writeBlob(value)
+        if (valueSize % 2 != 0) {
+            stream.skip(1)
+        }
+    }
+
+    private fun writeRecord(stream: DataOutput, tag: Tag, value: Instant) {
+        stream.writeShort(tag.value)
+        stream.writeShort(8)
+        stream.writeLong(MacTimeUtils.encodeHighResInstant(value))
+    }
+
+    private fun calculateStringRecordSize(string: String) = padToMultipleOf2(4 + string.toByteArray().size)
+    private fun calculateBlobRecordSize(blob: Blob) = padToMultipleOf2(4 + blob.size)
+    private fun padToMultipleOf2(value: Int) = if (value % 2 != 0) value + 1 else value
+
     companion object {
+        fun readFrom(blob: Blob) = readFrom(blob.toBlock())
+
         fun readFrom(stream: DataInput): Alias {
             val (appInfo, recSize, version) = AliasHeader.readFrom(stream)
 
@@ -242,7 +290,7 @@ data class Alias(
                     Tag.CARBON_FOLDER_NAME -> alias.targetInfo.folderName =
                         stream.readString(length, StandardCharsets.UTF_8).replace("/", ":")
                     Tag.CNID_PATH -> alias.targetInfo.cnidPath =
-                        (0..(length / 4)).map { stream.readInt().toUInt() }
+                        (0..(length / 4)).map { stream.readUInt() }
                     Tag.CARBON_PATH -> alias.targetInfo.carbonPath =
                         stream.readString(length, StandardCharsets.UTF_8)
                     Tag.APPLESHARE_ZONE -> alias.volumeInfo.lazyAppleShareInfo().zone =
@@ -267,8 +315,9 @@ data class Alias(
                         MacTimeUtils.decodeHighResInstant(stream.readLong())
                     Tag.HIGH_RES_CREATION_DATE -> alias.targetInfo.creationDate =
                         MacTimeUtils.decodeHighResInstant(stream.readLong())
-                    Tag.POSIX_PATH,
-                    Tag.POSIX_PATH_TO_MOUNTPOINT -> alias.targetInfo.posixPath =
+                    Tag.POSIX_PATH -> alias.targetInfo.posixPath =
+                        stream.readString(length, StandardCharsets.UTF_8)
+                    Tag.POSIX_PATH_TO_MOUNTPOINT -> alias.volumeInfo.posixPath =
                         stream.readString(length, StandardCharsets.UTF_8)
                     Tag.RECURSIVE_ALIAS_OF_DISK_IMAGE -> alias.volumeInfo.diskImageAlias =
                         readFrom(stream.readBlob(length).toBlock())

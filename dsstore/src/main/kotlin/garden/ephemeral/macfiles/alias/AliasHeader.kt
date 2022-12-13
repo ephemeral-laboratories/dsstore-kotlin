@@ -1,6 +1,7 @@
 package garden.ephemeral.macfiles.alias
 
 import garden.ephemeral.macfiles.common.io.DataInput
+import garden.ephemeral.macfiles.common.io.DataOutput
 import garden.ephemeral.macfiles.common.types.FourCC
 
 data class AliasHeader(
@@ -8,6 +9,11 @@ data class AliasHeader(
     val recSize: Short,
     val version: Short
 ) {
+    fun writeTo(stream: DataOutput) {
+        stream.writeFourCC(appInfo)
+        stream.writeShort(recSize)
+        stream.writeShort(version)
+    }
 
     companion object {
         const val SIZE = 8
