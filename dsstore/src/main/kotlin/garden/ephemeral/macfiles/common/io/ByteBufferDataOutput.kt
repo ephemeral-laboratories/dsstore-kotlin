@@ -39,7 +39,13 @@ class ByteBufferDataOutput(private val buffer: ByteBuffer) : DataOutput {
         buffer.putInt(value)
     }
 
-    override fun writeInt(value: UInt) = writeInt(value.toInt())
+    override fun writeIntLE(value: Int) {
+        requireAvailable(4)
+        buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).putInt(value)
+        buffer.position(buffer.position() + 4)
+    }
+
+    override fun writeUInt(value: UInt) = writeInt(value.toInt())
 
     override fun writeLong(value: Long) {
         requireAvailable(8)
@@ -49,6 +55,7 @@ class ByteBufferDataOutput(private val buffer: ByteBuffer) : DataOutput {
     override fun writeLongLE(value: Long) {
         requireAvailable(8)
         buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).putLong(value)
+        buffer.position(buffer.position() + 8)
     }
 
     override fun writeFourCC(value: FourCC) {

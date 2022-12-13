@@ -52,7 +52,7 @@ data class Alias(
         target.cnidPath?.let { cnidPath ->
             stream.writeShort(Tag.CNID_PATH.value)
             stream.writeShort((4 * cnidPath.size).toShort())
-            cnidPath.forEach(stream::writeInt)
+            cnidPath.forEach(stream::writeUInt)
         }
 
         target.carbonPath?.let { carbonPath ->

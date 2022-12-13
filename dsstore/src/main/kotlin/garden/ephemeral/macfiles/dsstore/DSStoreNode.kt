@@ -86,7 +86,7 @@ sealed class DSStoreNode {
         }
 
         override fun writeTo(stream: DataOutput) {
-            stream.writeInt(0)
+            stream.writeUInt(0U)
             stream.writeInt(records.size)
             records.forEach { record ->
                 record.writeTo(stream)

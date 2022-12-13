@@ -11,6 +11,14 @@ import java.nio.charset.StandardCharsets
  * Adapts a [ByteBuffer] as a [DataInput].
  */
 class ByteBufferDataInput(private val buffer: ByteBuffer) : DataInput {
+    override fun position(): Int {
+        return buffer.position()
+    }
+
+    override fun position(position: Int) {
+        buffer.position(position)
+    }
+
     override fun skip(byteCount: Int) {
         requireAvailable(byteCount)
         buffer.position(buffer.position() + byteCount)
@@ -26,9 +34,23 @@ class ByteBufferDataInput(private val buffer: ByteBuffer) : DataInput {
         return buffer.short
     }
 
+    override fun readShortLE(): Short {
+        requireAvailable(2)
+        val result = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).short
+        skip(2)
+        return result
+    }
+
     override fun readInt(): Int {
         requireAvailable(4)
         return buffer.int
+    }
+
+    override fun readIntLE(): Int {
+        requireAvailable(4)
+        val result = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).int
+        skip(4)
+        return result
     }
 
     override fun readUInt() = readInt().toUInt()
@@ -40,8 +62,35 @@ class ByteBufferDataInput(private val buffer: ByteBuffer) : DataInput {
 
     override fun readLongLE(): Long {
         requireAvailable(8)
-        return buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).long
+        val result = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).long
+        skip(8)
+        return result
     }
+
+    override fun readFloat(): Float {
+        requireAvailable(4)
+        return buffer.float
+    }
+
+    override fun readFloatLE(): Float {
+        requireAvailable(4)
+        val result = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).float
+        skip(4)
+        return result
+    }
+
+    override fun readDouble(): Double {
+        requireAvailable(8)
+        return buffer.double
+    }
+
+    override fun readDoubleLE(): Double {
+        requireAvailable(8)
+        val result = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).double
+        skip(8)
+        return result
+    }
+
     override fun readFourCC(): FourCC {
         return FourCC(readArray(4).toString(StandardCharsets.US_ASCII))
     }

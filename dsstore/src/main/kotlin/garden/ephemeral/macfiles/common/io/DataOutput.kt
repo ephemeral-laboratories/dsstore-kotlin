@@ -52,11 +52,18 @@ interface DataOutput {
     fun writeInt(value: Int)
 
     /**
+     * Writes a 4-byte little endian integer.
+     *
+     * @param value the int.
+     */
+    fun writeIntLE(value: Int)
+
+    /**
      * Writes a 4-byte big endian unsigned integer.
      *
      * @param value the int.
      */
-    fun writeInt(value: UInt)
+    fun writeUInt(value: UInt)
 
     /**
      * Writes an 8-byte big endian integer.

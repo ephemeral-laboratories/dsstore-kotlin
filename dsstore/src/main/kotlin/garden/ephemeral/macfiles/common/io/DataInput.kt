@@ -8,6 +8,9 @@ import java.nio.charset.Charset
  * Abstraction of data input, passed into various methods for reading data.
  */
 interface DataInput {
+    fun position(): Int
+
+    fun position(position: Int)
 
     /**
      * Skips the given number of bytes.
@@ -31,11 +34,25 @@ interface DataInput {
     fun readShort(): Short
 
     /**
+     * Reads a 2-byte little endian integer.
+     *
+     * @return the short.
+     */
+    fun readShortLE(): Short
+
+    /**
      * Reads a 4-byte big endian integer.
      *
      * @return the int.
      */
     fun readInt(): Int
+
+    /**
+     * Reads a 4-byte little endian integer.
+     *
+     * @return the int.
+     */
+    fun readIntLE(): Int
 
     /**
      * Reads a 4-byte big endian unsigned integer.
@@ -57,6 +74,34 @@ interface DataInput {
      * @return the long.
      */
     fun readLongLE(): Long
+
+    /**
+     * Reads a 32-bit float point value.
+     *
+     * @return the float.
+     */
+    fun readFloat(): Float
+
+    /**
+     * Reads a 32-bit float point value.
+     *
+     * @return the float.
+     */
+    fun readFloatLE(): Float
+
+    /**
+     * Reads a 64-bit floating point value.
+     *
+     * @return the double.
+     */
+    fun readDouble(): Double
+
+    /**
+     * Reads a 64-bit floating point value.
+     *
+     * @return the double.
+     */
+    fun readDoubleLE(): Double
 
     /**
      * Reads a four-character-code.

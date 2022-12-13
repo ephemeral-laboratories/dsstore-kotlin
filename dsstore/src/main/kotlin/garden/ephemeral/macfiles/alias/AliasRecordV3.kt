@@ -38,10 +38,10 @@ data class AliasRecordV3(
         stream.writeLong(volumeDateHighRes)
         stream.writeString(4, fsType, StandardCharsets.UTF_8)
         stream.writeShort(diskType)
-        stream.writeInt(folderCnid)
-        stream.writeInt(cnid)
+        stream.writeUInt(folderCnid)
+        stream.writeUInt(cnid)
         stream.writeLong(creationDateHighRes)
-        stream.writeInt(volumeAttributes)
+        stream.writeUInt(volumeAttributes)
         stream.writeBlob(reserved)
     }
 
