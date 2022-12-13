@@ -161,7 +161,7 @@ data class Bookmark(
 
             while (tocOffset != 0) {
                 val tocBase = header.headerSize + tocOffset
-                require(!((tocOffset > header.size - header.headerSize) || (header.size - tocBase < 20))) {
+                require(tocOffset <= header.size - header.headerSize && header.size - tocBase >= 20) {
                     "TOC offset out of range"
                 }
 
