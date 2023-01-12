@@ -1,4 +1,4 @@
 
 rootProject.name = "dsstore-kotlin"
 
-include(":dsstore")
+include(":macfiles")
