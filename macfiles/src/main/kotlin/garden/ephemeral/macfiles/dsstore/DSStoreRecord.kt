@@ -1,10 +1,9 @@
 package garden.ephemeral.macfiles.dsstore
-import garden.ephemeral.macfiles.dsstore.codecs.PropertyCodecs
-import garden.ephemeral.macfiles.common.types.Blob
-import garden.ephemeral.macfiles.common.types.FourCC
-import garden.ephemeral.macfiles.common.io.Block
 import garden.ephemeral.macfiles.common.io.DataInput
 import garden.ephemeral.macfiles.common.io.DataOutput
+import garden.ephemeral.macfiles.common.types.Blob
+import garden.ephemeral.macfiles.common.types.FourCC
+import garden.ephemeral.macfiles.dsstore.codecs.PropertyCodecs
 import java.nio.charset.StandardCharsets
 
 /**
@@ -65,7 +64,7 @@ data class DSStoreRecord(
 
         val codec = PropertyCodecs.findCodec(propertyId) ?: return value
 
-        return codec.decode(value.toBlock())
+        return codec.decode(value)
     }
 
     /**
@@ -102,12 +101,7 @@ data class DSStoreRecord(
             val codec = PropertyCodecs.findCodec(propertyId)
                 ?: throw IllegalArgumentException("No codec for value: $value")
 
-            return Pair(
-                DSStoreValueType.BLOB,
-                Block.create(codec.calculateSize(value)) { stream ->
-                    codec.encode(value, stream)
-                }.toBlob()
-            )
+            return Pair(DSStoreValueType.BLOB, codec.encode(value))
         }
 
         /**

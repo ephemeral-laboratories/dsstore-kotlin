@@ -44,4 +44,15 @@ class AliasWriteTests {
 
         assertThat(actual).isEqualTo(expected)
     }
+
+    @Test
+    fun `reproducing the alias from a dmg`() {
+        val alias = AliasReadTests.FROM_DMG_ALIAS
+        val actual = alias.toBlob()
+
+        val path = Path.of("src/test/resources/garden/ephemeral/macfiles/alias/from-dmg.alias")
+        val expected = Blob(Files.readAllBytes(path))
+
+        assertThat(actual).isEqualTo(expected)
+    }
 }

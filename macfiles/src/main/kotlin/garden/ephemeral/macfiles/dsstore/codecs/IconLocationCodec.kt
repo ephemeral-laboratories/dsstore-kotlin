@@ -1,11 +1,13 @@
 package garden.ephemeral.macfiles.dsstore.codecs
 
+import garden.ephemeral.macfiles.common.io.ByteBufferDataOutput
+import garden.ephemeral.macfiles.common.types.Blob
 import garden.ephemeral.macfiles.dsstore.types.IntPoint
-import garden.ephemeral.macfiles.common.io.DataInput
-import garden.ephemeral.macfiles.common.io.DataOutput
+import java.nio.ByteBuffer
 
 object IconLocationCodec : Codec<IntPoint> {
-    override fun decode(stream: DataInput): IntPoint {
+    override fun decode(blob: Blob): IntPoint {
+        val stream = blob.toBlock()
         val x = stream.readInt()
         val y = stream.readInt()
         @Suppress("GrazieInspection")
@@ -13,14 +15,13 @@ object IconLocationCodec : Codec<IntPoint> {
         return IntPoint(x, y)
     }
 
-    override fun calculateSize(value: IntPoint): Int {
-        return 16
-    }
-
-    override fun encode(value: IntPoint, stream: DataOutput) {
+    override fun encode(value: IntPoint): Blob {
+        val data = ByteArray(16)
+        val stream = ByteBufferDataOutput(ByteBuffer.wrap(data))
         stream.writeInt(value.x)
         stream.writeInt(value.y)
         stream.writeInt(0xFFFFFFFF.toInt())
         stream.writeInt(0xFFFF0000.toInt())
+        return Blob(data)
     }
 }

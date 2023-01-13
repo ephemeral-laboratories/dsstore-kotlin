@@ -1,7 +1,9 @@
 package garden.ephemeral.macfiles.common.types
 
 import garden.ephemeral.macfiles.common.io.Block
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
+import java.util.*
 
 /**
  * An immutable byte array.
@@ -48,5 +50,16 @@ class Blob(data: ByteArray) {
 
     companion object {
         fun zeroes(size: Int) = Blob(ByteArray(size))
+
+        fun fromHexDump(dump: String): Blob {
+            val scanner = Scanner(dump)
+            scanner.useDelimiter("""\s""")
+            val sink = ByteArrayOutputStream()
+            while (scanner.hasNext()) {
+                val b = scanner.nextInt(16)
+                sink.write(b)
+            }
+            return Blob(sink.toByteArray())
+        }
     }
 }

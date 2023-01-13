@@ -146,7 +146,7 @@ data class Alias(
 
         // TAG_CNID_PATH
         target.cnidPath?.let { cnidPath ->
-            size = 4 + 4 * cnidPath.size
+            size += 4 + 4 * cnidPath.size
         }
 
         // TAG_CARBON_PATH
@@ -290,7 +290,7 @@ data class Alias(
                     Tag.CARBON_FOLDER_NAME -> alias.targetInfo.folderName =
                         stream.readString(length, StandardCharsets.UTF_8).replace("/", ":")
                     Tag.CNID_PATH -> alias.targetInfo.cnidPath =
-                        (0..(length / 4)).map { stream.readUInt() }
+                        (0 until (length / 4)).map { stream.readUInt() }
                     Tag.CARBON_PATH -> alias.targetInfo.carbonPath =
                         stream.readString(length, StandardCharsets.UTF_8)
                     Tag.APPLESHARE_ZONE -> alias.volumeInfo.lazyAppleShareInfo().zone =

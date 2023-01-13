@@ -112,10 +112,45 @@ class AliasReadTests {
         )
     }
 
+    @Test
+    fun `alias containing cnid path`() {
+        val alias = readFromFile("from-dmg.alias")
+        assertThat(alias).isEqualTo(FROM_DMG_ALIAS)
+    }
+
     private fun readFromFile(filename: String): Alias {
         val path = Path.of("src/test/resources/garden/ephemeral/macfiles/alias/$filename")
         val buffer = ByteBuffer.wrap(Files.readAllBytes(path))
         val dataInput = ByteBufferDataInput(buffer)
         return Alias.readFrom(dataInput)
+    }
+
+    companion object {
+        val FROM_DMG_ALIAS = Alias(
+            appInfo = FourCC.ZERO,
+            version = 2,
+            volume = VolumeInfo(
+                name = "Acme",
+                creationDate = Instant.parse("2022-12-21T10:32:19Z"),
+                fsType = "H+",
+                diskType = VolumeType.FIXED_DISK,
+                attributeFlags = 0U,
+                fsId = "\u0000\u0000",
+                posixPath = "/Volumes/Acme"
+            ),
+            target = TargetInfo(
+                name = "Background.png",
+                kind = Kind.FILE,
+                folderCnid = 2612U,
+                cnid = 2613U,
+                creationDate = Instant.parse("2022-12-21T10:29:04Z"),
+                creatorCode = FourCC.ZERO,
+                typeCode = FourCC.ZERO,
+                folderName = ".background",
+                cnidPath = listOf(2612U),
+                carbonPath = "Acme:.background:\u0000Background.png",
+                posixPath = "/.background/Background.png"
+            )
+        )
     }
 }

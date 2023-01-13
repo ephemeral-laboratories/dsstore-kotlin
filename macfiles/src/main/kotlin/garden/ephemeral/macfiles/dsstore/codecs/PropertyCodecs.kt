@@ -1,7 +1,7 @@
 package garden.ephemeral.macfiles.dsstore.codecs
 
-import garden.ephemeral.macfiles.dsstore.DSStoreProperties
 import garden.ephemeral.macfiles.common.types.FourCC
+import garden.ephemeral.macfiles.dsstore.DSStoreProperties
 
 /**
  * Repository of codecs for known properties.
@@ -10,6 +10,7 @@ class PropertyCodecs {
     companion object {
         private val codecMap = mapOf(
             DSStoreProperties.IconLocation to IconLocationCodec,
+            DSStoreProperties.IconViewOptionsPList to IconViewOptionsCodec,
         )
 
         /**
