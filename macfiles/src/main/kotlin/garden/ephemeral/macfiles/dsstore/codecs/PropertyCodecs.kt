@@ -9,6 +9,8 @@ import garden.ephemeral.macfiles.dsstore.DSStoreProperties
 class PropertyCodecs {
     companion object {
         private val codecMap = mapOf(
+            DSStoreProperties.BackgroundBookmark to BookmarkCodec,
+            DSStoreProperties.BrowserWindowSettings to BrowserWindowSettingsCodec,
             DSStoreProperties.IconLocation to IconLocationCodec,
             DSStoreProperties.IconViewOptionsPList to IconViewOptionsCodec,
         )

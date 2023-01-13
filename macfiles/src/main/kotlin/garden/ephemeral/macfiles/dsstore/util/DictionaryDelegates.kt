@@ -9,10 +9,10 @@ import garden.ephemeral.macfiles.common.types.Blob
 import kotlin.reflect.KProperty
 
 object DictionaryDelegates {
-    fun booleanFrom(dictionary: NSDictionary): GenericMutableProperty<Boolean> {
+    fun booleanFrom(dictionary: NSDictionary, keyOverride: String? = null): GenericMutableProperty<Boolean> {
         return object : GenericMutableProperty<Boolean> {
             override fun getValue(receiver: Any, property: KProperty<*>): Boolean? {
-                val number = dictionary[property.name] as NSNumber? ?: return null
+                val number = dictionary[keyOverride ?: property.name] as NSNumber? ?: return null
                 return number.boolValue()
             }
 
@@ -26,10 +26,10 @@ object DictionaryDelegates {
         }
     }
 
-    fun intFrom(dictionary: NSDictionary): GenericMutableProperty<Int> {
+    fun intFrom(dictionary: NSDictionary, keyOverride: String? = null): GenericMutableProperty<Int> {
         return object : GenericMutableProperty<Int> {
             override fun getValue(receiver: Any, property: KProperty<*>): Int? {
-                val number = dictionary[property.name] as NSNumber? ?: return null
+                val number = dictionary[keyOverride ?: property.name] as NSNumber? ?: return null
                 return number.intValue()
             }
 
@@ -43,10 +43,10 @@ object DictionaryDelegates {
         }
     }
 
-    fun doubleFrom(dictionary: NSDictionary): GenericMutableProperty<Double> {
+    fun doubleFrom(dictionary: NSDictionary, keyOverride: String? = null): GenericMutableProperty<Double> {
         return object : GenericMutableProperty<Double> {
             override fun getValue(receiver: Any, property: KProperty<*>): Double? {
-                val number = dictionary[property.name] as NSNumber? ?: return null
+                val number = dictionary[keyOverride ?: property.name] as NSNumber? ?: return null
                 return number.doubleValue()
             }
 
@@ -60,10 +60,10 @@ object DictionaryDelegates {
         }
     }
 
-    fun stringFrom(dictionary: NSDictionary): GenericMutableProperty<String> {
+    fun stringFrom(dictionary: NSDictionary, keyOverride: String? = null): GenericMutableProperty<String> {
         return object : GenericMutableProperty<String> {
             override fun getValue(receiver: Any, property: KProperty<*>): String? {
-                val string = dictionary[property.name] as NSString? ?: return null
+                val string = dictionary[keyOverride ?: property.name] as NSString? ?: return null
                 return string.content
             }
 

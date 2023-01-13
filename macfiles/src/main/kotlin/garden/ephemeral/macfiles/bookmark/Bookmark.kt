@@ -5,6 +5,8 @@ import garden.ephemeral.macfiles.bookmark.types.UUID
 import garden.ephemeral.macfiles.bookmark.types.Unrecognised
 import garden.ephemeral.macfiles.common.MacTimeUtils
 import garden.ephemeral.macfiles.common.io.DataInput
+import garden.ephemeral.macfiles.common.io.DataOutput
+import garden.ephemeral.macfiles.common.types.Blob
 import java.nio.charset.StandardCharsets
 
 /**
@@ -29,6 +31,14 @@ data class Bookmark(
 //        }
 //        tocs.values.first()[key] = value
 //    }
+
+    fun toBlob(): Blob {
+        TODO()
+    }
+
+    fun writeTo(stream: DataOutput) {
+        TODO()
+    }
 
     /*
     def to_bytes(self):
@@ -140,6 +150,16 @@ data class Bookmark(
         private const val SUBTYPE_NUMBER_SINT64 = 4
         private const val SUBTYPE_NUMBER_FLOAT32 = 5
         private const val SUBTYPE_NUMBER_FLOAT64 = 6
+
+        /**
+         * Reads a macOS bookmark from the provided blob.
+         *
+         * @param blob the blob to read from.
+         * @return the bookmark.
+         */
+        fun readFrom(blob: Blob): Bookmark {
+            return readFrom(blob.toBlock())
+        }
 
         /**
          * Reads a macOS bookmark from the provided data stream.

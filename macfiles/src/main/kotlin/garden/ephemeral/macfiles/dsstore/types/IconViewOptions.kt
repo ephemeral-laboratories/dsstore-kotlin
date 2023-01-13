@@ -3,7 +3,6 @@ package garden.ephemeral.macfiles.dsstore.types
 import com.dd.plist.BinaryPropertyListParser
 import com.dd.plist.BinaryPropertyListWriter
 import com.dd.plist.NSDictionary
-import com.dd.plist.NSNumber
 import garden.ephemeral.macfiles.common.types.Blob
 import garden.ephemeral.macfiles.dsstore.util.CompositeDelegates
 import garden.ephemeral.macfiles.dsstore.util.DictionaryDelegates
@@ -56,10 +55,6 @@ data class IconViewOptions(private val dictionary: NSDictionary) {
 
     class Builder {
         private val dictionary: NSDictionary = NSDictionary()
-        init {
-            // TODO: What other default values?
-            dictionary["viewOptionsVersion"] = NSNumber(1)
-        }
 
         var viewOptionsVersion by DictionaryDelegates.intFrom(dictionary)
 
@@ -86,6 +81,11 @@ data class IconViewOptions(private val dictionary: NSDictionary) {
         private var scrollPositionX by DictionaryDelegates.doubleFrom(dictionary)
         private var scrollPositionY by DictionaryDelegates.doubleFrom(dictionary)
         var scrollPosition by CompositeDelegates.doublePoint(::scrollPositionX, ::scrollPositionY)
+
+        init {
+            // TODO: What other default values?
+            viewOptionsVersion = 1
+        }
 
         fun build(): IconViewOptions {
             return IconViewOptions(dictionary.clone())

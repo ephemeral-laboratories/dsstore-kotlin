@@ -52,7 +52,7 @@ class DSStoreProperties {
          * and ShowPathbar. Sometimes contains ViewStyle (a string), TargetURL (a string), and TargetPath
          * (an array of strings).
          */
-        val WindowSizeAndLayout = FourCC("bwsp")
+        val BrowserWindowSettings = FourCC("bwsp")
 
         /**
          * ustr, containing a file's "Spotlight Comments". (The comment is also stored in the
@@ -222,6 +222,17 @@ class DSStoreProperties {
          */
         val PhysicalSize = FourCC("phyS")
         val PhysicalSize1 = FourCC("ph1S")
+
+        /**
+         * blob, supposedly another background bookmark, but not sure what it's for as I haven't yet encountered it.
+         */
+        val BackgroundBookmark0 = FourCC("pBB0")
+
+        /**
+         * blob, seems to contain a Bookmark to the background image. Presumably supersedes "pict"?
+         * See also 'BKGD'.
+         */
+        val BackgroundBookmark = FourCC("pBBk")
 
         /**
          * Variable-length blob, directories only. Despite the name, this contains not a PICT image but an Alias
