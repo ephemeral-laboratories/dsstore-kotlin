@@ -34,6 +34,12 @@ class ByteBufferDataOutput(private val buffer: ByteBuffer) : DataOutput {
         buffer.putShort(value)
     }
 
+    override fun writeShortLE(value: Short) {
+        requireAvailable(2)
+        buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).putShort(value)
+        buffer.position(buffer.position() + 2)
+    }
+
     override fun writeInt(value: Int) {
         requireAvailable(4)
         buffer.putInt(value)
@@ -55,6 +61,28 @@ class ByteBufferDataOutput(private val buffer: ByteBuffer) : DataOutput {
     override fun writeLongLE(value: Long) {
         requireAvailable(8)
         buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).putLong(value)
+        buffer.position(buffer.position() + 8)
+    }
+
+    override fun writeFloat(value: Float) {
+        requireAvailable(4)
+        buffer.putFloat(value)
+    }
+
+    override fun writeFloatLE(value: Float) {
+        requireAvailable(4)
+        buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).putFloat(value)
+        buffer.position(buffer.position() + 4)
+    }
+
+    override fun writeDouble(value: Double) {
+        requireAvailable(8)
+        buffer.putDouble(value)
+    }
+
+    override fun writeDoubleLE(value: Double) {
+        requireAvailable(8)
+        buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).putDouble(value)
         buffer.position(buffer.position() + 8)
     }
 

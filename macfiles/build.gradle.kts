@@ -17,6 +17,7 @@ dependencies {
     implementation("com.googlecode.plist:dd-plist:1.26")
 
     testImplementation(kotlin("test"))
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.2")
     testImplementation("com.willowtreeapps.assertk:assertk:0.25")
 }
 

@@ -45,6 +45,13 @@ interface DataOutput {
     fun writeShort(value: Short)
 
     /**
+     * Writes a 2-byte little endian integer.
+     *
+     * @param value the short.
+     */
+    fun writeShortLE(value: Short)
+
+    /**
      * Writes a 4-byte big endian integer.
      *
      * @param value the int.
@@ -78,6 +85,34 @@ interface DataOutput {
      * @param value the long.
      */
     fun writeLongLE(value: Long)
+
+    /**
+     * Writes a 32-bit big endian floating point value.
+     *
+     * @param value the float.
+     */
+    fun writeFloat(value: Float)
+
+    /**
+     * Writes a 32-bit *little* endian floating point value.
+     *
+     * @param value the float.
+     */
+    fun writeFloatLE(value: Float)
+
+    /**
+     * Writes a 64-bit big endian floating point value.
+     *
+     * @param value the double.
+     */
+    fun writeDouble(value: Double)
+
+    /**
+     * Writes a 64-bit *little* endian floating point value.
+     *
+     * @param value the double.
+     */
+    fun writeDoubleLE(value: Double)
 
     /**
      * Writes a four-character-code.
