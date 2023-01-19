@@ -3,7 +3,7 @@ package garden.ephemeral.macfiles.bookmark
 /**
  * Repository of known bookmark keys.
  */
-object StandardKeys {
+object BookmarkKeys {
     // A URL
     val kBookmarkURL = TocKey.OfInt(0x1003)
 

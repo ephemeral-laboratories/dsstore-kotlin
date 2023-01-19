@@ -22,6 +22,20 @@ data class BrowserWindowSettings(private val dictionary: NSDictionary) {
         return Blob(data)
     }
 
+    override fun toString() = buildString {
+        append("BrowserWindowSettings(")
+        append("containerShowSidebar=$containerShowSidebar, ")
+        append("previewPaneVisibility=$previewPaneVisibility, ")
+        append("showPathbar=$showPathbar, ")
+        append("showSidebar=$showSidebar, ")
+        append("showStatusBar=$showStatusBar, ")
+        append("showTabView=$showTabView, ")
+        append("showToolbar=$showToolbar, ")
+        append("sidebarWidth=$sidebarWidth, ")
+        append("windowBounds=$windowBounds")
+        append(")")
+    }
+
     companion object {
         fun fromBlob(blob: Blob): BrowserWindowSettings {
             val plist = BinaryPropertyListParser.parse(blob.toByteArray())

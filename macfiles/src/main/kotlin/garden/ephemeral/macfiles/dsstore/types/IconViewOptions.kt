@@ -42,6 +42,24 @@ data class IconViewOptions(private val dictionary: NSDictionary) {
         return Blob(data)
     }
 
+    override fun toString() = buildString {
+        append("IconViewOptions(")
+        append("viewOptionsVersion=$viewOptionsVersion, ")
+        append("backgroundType=$backgroundType, ")
+        append("backgroundImageAlias=$backgroundImageAlias, ")
+        append("backgroundColor=$backgroundColor, ")
+        append("gridOffset=$gridOffset, ")
+        append("gridSpacing=$gridSpacing, ")
+        append("arrangeBy=$arrangeBy, ")
+        append("showIconPreview=$showIconPreview, ")
+        append("showItemInfo=$showItemInfo, ")
+        append("labelOnBottom=$labelOnBottom, ")
+        append("textSize=$textSize, ")
+        append("iconSize=$iconSize, ")
+        append("scrollPosition=$scrollPosition")
+        append(")")
+    }
+
     companion object {
         fun fromBlob(blob: Blob): IconViewOptions {
             val plist = BinaryPropertyListParser.parse(blob.toByteArray())

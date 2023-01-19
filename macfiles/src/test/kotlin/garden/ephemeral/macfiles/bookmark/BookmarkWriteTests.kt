@@ -48,10 +48,10 @@ class BookmarkWriteTests {
     @Test
     fun `extra tables of contents`() {
         val bookmark = Bookmark.build {
-            put(StandardKeys.kBookmarkDisplayName, "Alice")
+            put(BookmarkKeys.kBookmarkDisplayName, "Alice")
 
             extraToc(42) {
-                put(StandardKeys.kBookmarkDisplayName, "Bob")
+                put(BookmarkKeys.kBookmarkDisplayName, "Bob")
             }
         }
 

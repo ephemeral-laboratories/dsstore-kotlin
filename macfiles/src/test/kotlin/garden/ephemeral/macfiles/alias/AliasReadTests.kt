@@ -130,13 +130,13 @@ class AliasReadTests {
             appInfo = FourCC.ZERO,
             version = 2,
             volume = VolumeInfo(
-                name = "Acme",
+                name = "Noot",
                 creationDate = Instant.parse("2022-12-21T10:32:19Z"),
                 fsType = "H+",
                 diskType = VolumeType.FIXED_DISK,
                 attributeFlags = 0U,
                 fsId = "\u0000\u0000",
-                posixPath = "/Volumes/Acme"
+                posixPath = "/Volumes/Noot"
             ),
             target = TargetInfo(
                 name = "Background.png",
@@ -148,7 +148,7 @@ class AliasReadTests {
                 typeCode = FourCC.ZERO,
                 folderName = ".background",
                 cnidPath = listOf(2612U),
-                carbonPath = "Acme:.background:\u0000Background.png",
+                carbonPath = "Noot:.background:\u0000Background.png",
                 posixPath = "/.background/Background.png"
             )
         )

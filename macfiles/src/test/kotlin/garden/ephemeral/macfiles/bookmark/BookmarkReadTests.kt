@@ -28,41 +28,41 @@ class BookmarkReadTests {
         val bookmark = readFromFile("folder.bookmark")
         assertThat(bookmark).isEqualTo(
             Bookmark.build {
-                put(StandardKeys.kBookmarkPath, listOf("..", "..", "..", "Applications"))
+                put(BookmarkKeys.kBookmarkPath, listOf("..", "..", "..", "Applications"))
                 put(
-                    StandardKeys.kBookmarkCNIDPath, listOf<Number>(
+                    BookmarkKeys.kBookmarkCNIDPath, listOf<Number>(
                         1152921500312727487L, 1152921500311879701L, 2, 23833
                     )
                 )
                 put(
-                    StandardKeys.kBookmarkFileProperties, Blob(
+                    BookmarkKeys.kBookmarkFileProperties, Blob(
                         byteArrayOf(
                             0x2, 0, 0, 0, 0, 0, 0, 0, 0xf, 0, 0, 0, 0, 0, 0, 0,
                             0, 0, 0, 0, 0, 0, 0, 0
                         )
                     )
                 )
-                put(StandardKeys.kBookmarkFileCreationDate, Instant.parse("2022-07-14T09:04:26.314218997Z"))
-                put(StandardKeys.kBookmarkVolumePath, "/System/Volumes/Data")
-                put(StandardKeys.kBookmarkVolumeURL, URL.Absolute("file:///System/Volumes/Data"))
-                put(StandardKeys.kBookmarkVolumeName, "Data")
-                put(StandardKeys.kBookmarkVolumeUUID, "7053101F-22D5-4135-AE6F-DB2ECBC57613")
-                put(StandardKeys.kBookmarkVolumeSize, 994662584320)
-                put(StandardKeys.kBookmarkVolumeCreationDate, Instant.parse("2022-08-04T23:59:05.734845995Z"))
+                put(BookmarkKeys.kBookmarkFileCreationDate, Instant.parse("2022-07-14T09:04:26.314218997Z"))
+                put(BookmarkKeys.kBookmarkVolumePath, "/System/Volumes/Data")
+                put(BookmarkKeys.kBookmarkVolumeURL, URL.Absolute("file:///System/Volumes/Data"))
+                put(BookmarkKeys.kBookmarkVolumeName, "Data")
+                put(BookmarkKeys.kBookmarkVolumeUUID, "7053101F-22D5-4135-AE6F-DB2ECBC57613")
+                put(BookmarkKeys.kBookmarkVolumeSize, 994662584320)
+                put(BookmarkKeys.kBookmarkVolumeCreationDate, Instant.parse("2022-08-04T23:59:05.734845995Z"))
                 put(
-                    StandardKeys.kBookmarkVolumeProperties, Blob(
+                    BookmarkKeys.kBookmarkVolumeProperties, Blob(
                         byteArrayOf(
                             0x81.toByte(), 0, 0, 0, 0x1, 0, 0, 0, 0xef.toByte(), 0x13, 0, 0, 0x1, 0, 0, 0,
                             0, 0, 0, 0, 0, 0, 0, 0
                         )
                     )
                 )
-                put(StandardKeys.kBookmarkVolumeIsRoot, false)
-                put(StandardKeys.kBookmarkContainingFolder, 2)
-                put(StandardKeys.kBookmarkUserName, "unknown")
-                put(StandardKeys.kBookmarkUID, 99)
-                put(StandardKeys.kBookmarkWasFileReference, true)
-                put(StandardKeys.kBookmarkCreationOptions, 512)
+                put(BookmarkKeys.kBookmarkVolumeIsRoot, false)
+                put(BookmarkKeys.kBookmarkContainingFolder, 2)
+                put(BookmarkKeys.kBookmarkUserName, "unknown")
+                put(BookmarkKeys.kBookmarkUID, 99)
+                put(BookmarkKeys.kBookmarkWasFileReference, true)
+                put(BookmarkKeys.kBookmarkCreationOptions, 512)
             }
         )
     }
@@ -72,41 +72,41 @@ class BookmarkReadTests {
         val bookmark = readFromFile("app.bookmark")
         assertThat(bookmark).isEqualTo(
             Bookmark.build {
-                put(StandardKeys.kBookmarkPath, listOf("..", "..", "..", "Applications", "Safari.app"))
+                put(BookmarkKeys.kBookmarkPath, listOf("..", "..", "..", "Applications", "Safari.app"))
                 put(
-                    StandardKeys.kBookmarkCNIDPath, listOf<Number>(
+                    BookmarkKeys.kBookmarkCNIDPath, listOf<Number>(
                         1152921500312727487L, 1152921500311879701L, 2, 23833, 25880792
                     )
                 )
                 put(
-                    StandardKeys.kBookmarkFileProperties, Blob(
+                    BookmarkKeys.kBookmarkFileProperties, Blob(
                         byteArrayOf(
                             0x2, 0, 0, 0, 0, 0, 0, 0, 0xf, 0, 0, 0, 0, 0, 0, 0,
                             0, 0, 0, 0, 0, 0, 0, 0
                         )
                     )
                 )
-                put(StandardKeys.kBookmarkFileCreationDate, Instant.parse("2022-10-21T01:39:29Z"))
-                put(StandardKeys.kBookmarkVolumePath, "/System/Volumes/Data")
-                put(StandardKeys.kBookmarkVolumeURL, URL.Absolute("file:///System/Volumes/Data"))
-                put(StandardKeys.kBookmarkVolumeName, "Data")
-                put(StandardKeys.kBookmarkVolumeUUID, "7053101F-22D5-4135-AE6F-DB2ECBC57613")
-                put(StandardKeys.kBookmarkVolumeSize, 994662584320)
-                put(StandardKeys.kBookmarkVolumeCreationDate, Instant.parse("2022-08-04T23:59:05.734845995Z"))
+                put(BookmarkKeys.kBookmarkFileCreationDate, Instant.parse("2022-10-21T01:39:29Z"))
+                put(BookmarkKeys.kBookmarkVolumePath, "/System/Volumes/Data")
+                put(BookmarkKeys.kBookmarkVolumeURL, URL.Absolute("file:///System/Volumes/Data"))
+                put(BookmarkKeys.kBookmarkVolumeName, "Data")
+                put(BookmarkKeys.kBookmarkVolumeUUID, "7053101F-22D5-4135-AE6F-DB2ECBC57613")
+                put(BookmarkKeys.kBookmarkVolumeSize, 994662584320)
+                put(BookmarkKeys.kBookmarkVolumeCreationDate, Instant.parse("2022-08-04T23:59:05.734845995Z"))
                 put(
-                    StandardKeys.kBookmarkVolumeProperties, Blob(
+                    BookmarkKeys.kBookmarkVolumeProperties, Blob(
                         byteArrayOf(
                             0x81.toByte(), 0, 0, 0, 0x1, 0, 0, 0, 0xef.toByte(), 0x13, 0, 0, 0x1, 0, 0, 0,
                             0, 0, 0, 0, 0, 0, 0, 0
                         )
                     )
                 )
-                put(StandardKeys.kBookmarkVolumeIsRoot, false)
-                put(StandardKeys.kBookmarkContainingFolder, 3)
-                put(StandardKeys.kBookmarkUserName, "unknown")
-                put(StandardKeys.kBookmarkUID, 99)
-                put(StandardKeys.kBookmarkWasFileReference, true)
-                put(StandardKeys.kBookmarkCreationOptions, 512)
+                put(BookmarkKeys.kBookmarkVolumeIsRoot, false)
+                put(BookmarkKeys.kBookmarkContainingFolder, 3)
+                put(BookmarkKeys.kBookmarkUserName, "unknown")
+                put(BookmarkKeys.kBookmarkUID, 99)
+                put(BookmarkKeys.kBookmarkWasFileReference, true)
+                put(BookmarkKeys.kBookmarkCreationOptions, 512)
             }
         )
     }
@@ -132,9 +132,9 @@ class BookmarkReadTests {
 
     companion object {
         val EXPECTED_FILE_BOOKMARK = Bookmark.build {
-            put(StandardKeys.kBookmarkPath, listOf("..", "..", "..", "Users", "trejkaz", "jenkins.log"))
+            put(BookmarkKeys.kBookmarkPath, listOf("..", "..", "..", "Users", "trejkaz", "jenkins.log"))
             put(
-                StandardKeys.kBookmarkCNIDPath, listOf<Number>(
+                BookmarkKeys.kBookmarkCNIDPath, listOf<Number>(
                     1152921500312727487L,
                     1152921500311879701L,
                     2,
@@ -144,34 +144,34 @@ class BookmarkReadTests {
                 )
             )
             put(
-                StandardKeys.kBookmarkFileProperties, Blob(
+                BookmarkKeys.kBookmarkFileProperties, Blob(
                     byteArrayOf(
                         0x1, 0, 0, 0, 0, 0, 0, 0, 0xf, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0, 0
                     )
                 )
             )
-            put(StandardKeys.kBookmarkFileCreationDate, Instant.parse("2022-09-01T23:04:01.204694986Z"))
-            put(StandardKeys.kBookmarkVolumePath, "/System/Volumes/Data")
-            put(StandardKeys.kBookmarkVolumeURL, URL.Absolute("file:///System/Volumes/Data"))
-            put(StandardKeys.kBookmarkVolumeName, "Data")
-            put(StandardKeys.kBookmarkVolumeUUID, "7053101F-22D5-4135-AE6F-DB2ECBC57613")
-            put(StandardKeys.kBookmarkVolumeSize, 994662584320)
-            put(StandardKeys.kBookmarkVolumeCreationDate, Instant.parse("2022-08-04T23:59:05.734845995Z"))
+            put(BookmarkKeys.kBookmarkFileCreationDate, Instant.parse("2022-09-01T23:04:01.204694986Z"))
+            put(BookmarkKeys.kBookmarkVolumePath, "/System/Volumes/Data")
+            put(BookmarkKeys.kBookmarkVolumeURL, URL.Absolute("file:///System/Volumes/Data"))
+            put(BookmarkKeys.kBookmarkVolumeName, "Data")
+            put(BookmarkKeys.kBookmarkVolumeUUID, "7053101F-22D5-4135-AE6F-DB2ECBC57613")
+            put(BookmarkKeys.kBookmarkVolumeSize, 994662584320)
+            put(BookmarkKeys.kBookmarkVolumeCreationDate, Instant.parse("2022-08-04T23:59:05.734845995Z"))
             put(
-                StandardKeys.kBookmarkVolumeProperties, Blob(
+                BookmarkKeys.kBookmarkVolumeProperties, Blob(
                     byteArrayOf(
                         0x81.toByte(), 0, 0, 0, 0x1, 0, 0, 0, 0xef.toByte(), 0x13, 0, 0, 0x1, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0, 0
                     )
                 )
             )
-            put(StandardKeys.kBookmarkVolumeIsRoot, false)
-            put(StandardKeys.kBookmarkContainingFolder, 4)
-            put(StandardKeys.kBookmarkUserName, "unknown")
-            put(StandardKeys.kBookmarkUID, 99)
-            put(StandardKeys.kBookmarkWasFileReference, true)
-            put(StandardKeys.kBookmarkCreationOptions, 512)
+            put(BookmarkKeys.kBookmarkVolumeIsRoot, false)
+            put(BookmarkKeys.kBookmarkContainingFolder, 4)
+            put(BookmarkKeys.kBookmarkUserName, "unknown")
+            put(BookmarkKeys.kBookmarkUID, 99)
+            put(BookmarkKeys.kBookmarkWasFileReference, true)
+            put(BookmarkKeys.kBookmarkCreationOptions, 512)
         }
     }
 }

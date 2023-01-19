@@ -21,7 +21,7 @@ object DictionaryDelegates {
                     dictionary.remove(property.name)
                     return
                 }
-                dictionary[property.name] = NSNumber(value)
+                dictionary[keyOverride ?: property.name] = NSNumber(value)
             }
         }
     }
@@ -38,7 +38,7 @@ object DictionaryDelegates {
                     dictionary.remove(property.name)
                     return
                 }
-                dictionary[property.name] = NSNumber(value)
+                dictionary[keyOverride ?: property.name] = NSNumber(value)
             }
         }
     }
@@ -55,7 +55,7 @@ object DictionaryDelegates {
                     dictionary.remove(property.name)
                     return
                 }
-                dictionary[property.name] = NSNumber(value)
+                dictionary[keyOverride ?: property.name] = NSNumber(value)
             }
         }
     }
@@ -72,7 +72,7 @@ object DictionaryDelegates {
                     dictionary.remove(property.name)
                     return
                 }
-                dictionary[property.name] = NSString(value)
+                dictionary[keyOverride ?: property.name] = NSString(value)
             }
         }
     }

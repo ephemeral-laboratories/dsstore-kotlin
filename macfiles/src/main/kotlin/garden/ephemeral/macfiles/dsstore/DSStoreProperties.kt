@@ -244,7 +244,7 @@ class DSStoreProperties {
         /**
          * long, attached to directories. Always appears to contain the value 1. Appeared in 10.7 or 10.8.
          */
-        // val ??? = FourCC("vSrn")
+        val UnknownDirectoryTag = FourCC("vSrn")
 
         /**
          * type, directories only. Indicates the style of the view (one of icnv, clmv, Nlsv, or Flwv,
@@ -252,6 +252,12 @@ class DSStoreProperties {
          * by the Finder's "Always open in icon [or other style] view" checkbox. This appears to be a new
          * addition to the Leopard (10.5) Finder.
          */
-        val ViewStyle = FourCC("vstl")
+        val ViewStyle1 = FourCC("vstl")
+
+        /**
+         * Alternative property for specifying the current view?
+         * Seems basically identical to [ViewStyle1].
+         */
+        val ViewStyle2 = FourCC("icvl")
     }
 }
