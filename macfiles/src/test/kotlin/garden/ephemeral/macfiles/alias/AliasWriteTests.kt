@@ -17,7 +17,7 @@ class AliasWriteTests {
             volume = VolumeInfo(
                 name = "Mac Test",
                 creationDate = Instant.parse("2022-12-12T23:13:02Z"),
-                fsType = "H+",
+                fsType = FileSystemType.HFS_PLUS,
                 diskType = VolumeType.FIXED_DISK,
                 attributeFlags = 0U,
                 fsId = "\u0000\u0000",

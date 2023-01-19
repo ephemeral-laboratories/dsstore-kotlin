@@ -11,7 +11,7 @@ class AliasRecordV2(
     val kind: Short,
     val volName: String,
     val volDate: UInt,
-    val fsType: String,
+    val fsType: FileSystemType,
     val diskType: Short,
     val folderCnid: UInt,
     val filename: String,
@@ -48,7 +48,7 @@ class AliasRecordV2(
         stream.writeShort(kind)
         stream.writePascalString(28, volName, StandardCharsets.UTF_8)
         stream.writeUInt(volDate)
-        stream.writeString(2, fsType, StandardCharsets.UTF_8)
+        stream.writeString(2, fsType.identifier, StandardCharsets.UTF_8)
         stream.writeShort(diskType)
         stream.writeUInt(folderCnid)
         stream.writePascalString(64, filename, StandardCharsets.UTF_8)
@@ -70,7 +70,7 @@ class AliasRecordV2(
             val kind = stream.readShort()
             val volName = stream.readPascalString(28, StandardCharsets.UTF_8)
             val volDate = stream.readUInt()
-            val fsType = stream.readString(2, StandardCharsets.UTF_8)
+            val fsType = FileSystemType.forIdentifier(stream.readString(2, StandardCharsets.UTF_8))
             val diskType = stream.readShort()
             val folderCnid = stream.readUInt()
             val filename = stream.readPascalString(64, StandardCharsets.UTF_8)

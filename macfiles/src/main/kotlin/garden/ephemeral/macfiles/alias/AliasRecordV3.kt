@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets
 data class AliasRecordV3(
     val kind: Short,
     val volumeDateHighRes: Long,
-    val fsType: String,
+    val fsType: FileSystemType,
     val diskType: Short,
     val folderCnid: UInt,
     val cnid: UInt,
@@ -36,7 +36,7 @@ data class AliasRecordV3(
     override fun writeTo(stream: DataOutput) {
         stream.writeShort(kind)
         stream.writeLong(volumeDateHighRes)
-        stream.writeString(4, fsType, StandardCharsets.UTF_8)
+        stream.writeString(4, fsType.identifier, StandardCharsets.UTF_8)
         stream.writeShort(diskType)
         stream.writeUInt(folderCnid)
         stream.writeUInt(cnid)
@@ -51,7 +51,7 @@ data class AliasRecordV3(
         fun readFrom(stream: DataInput): AliasRecordV3 {
             val kind = stream.readShort()
             val volumeDateHighRes = stream.readLong()
-            val fsType = stream.readString(4, StandardCharsets.UTF_8)
+            val fsType = FileSystemType.forIdentifier(stream.readString(4, StandardCharsets.UTF_8))
             val diskType = stream.readShort()
             val folderCnid = stream.readUInt()
             val cnid = stream.readUInt()

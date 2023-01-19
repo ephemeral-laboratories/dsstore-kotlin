@@ -25,7 +25,7 @@ import java.time.Instant
 data class VolumeInfo(
     val name: String,
     val creationDate: Instant,
-    val fsType: String,
+    val fsType: FileSystemType,
     val diskType: VolumeType,
     val attributeFlags: UInt,
     val fsId: String?,
@@ -74,7 +74,7 @@ data class VolumeInfo(
     class Builder(
         var name: String,
         var creationDate: Instant,
-        val fsType: String,
+        val fsType: FileSystemType,
         val diskType: VolumeType,
         val attributeFlags: UInt,
         val fsId: String? = null,
