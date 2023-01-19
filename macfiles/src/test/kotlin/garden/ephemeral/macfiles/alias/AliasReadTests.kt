@@ -7,7 +7,6 @@ import garden.ephemeral.macfiles.common.types.FourCC
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import java.nio.file.Files
-import java.nio.file.Path
 import java.time.Instant
 
 class AliasReadTests {
@@ -119,7 +118,7 @@ class AliasReadTests {
     }
 
     private fun readFromFile(filename: String): Alias {
-        val path = Path.of("src/test/resources/garden/ephemeral/macfiles/alias/$filename")
+        val path = getFilePath(filename)
         val buffer = ByteBuffer.wrap(Files.readAllBytes(path))
         val dataInput = ByteBufferDataInput(buffer)
         return Alias.readFrom(dataInput)

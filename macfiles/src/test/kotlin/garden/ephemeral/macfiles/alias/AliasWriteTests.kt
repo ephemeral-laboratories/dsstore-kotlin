@@ -6,7 +6,6 @@ import garden.ephemeral.macfiles.common.types.Blob
 import garden.ephemeral.macfiles.common.types.FourCC
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
-import java.nio.file.Path
 import java.time.Instant
 
 class AliasWriteTests {
@@ -39,7 +38,7 @@ class AliasWriteTests {
         )
         val actual = alias.toBlob()
 
-        val path = Path.of("src/test/resources/garden/ephemeral/macfiles/alias/file.alias")
+        val path = getFilePath("file.alias")
         val expected = Blob(Files.readAllBytes(path))
 
         assertThat(actual).isEqualTo(expected)
@@ -50,7 +49,7 @@ class AliasWriteTests {
         val alias = AliasReadTests.FROM_DMG_ALIAS
         val actual = alias.toBlob()
 
-        val path = Path.of("src/test/resources/garden/ephemeral/macfiles/alias/from-dmg.alias")
+        val path = getFilePath("from-dmg.alias")
         val expected = Blob(Files.readAllBytes(path))
 
         assertThat(actual).isEqualTo(expected)

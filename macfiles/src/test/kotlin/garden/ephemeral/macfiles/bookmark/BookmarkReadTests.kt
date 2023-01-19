@@ -11,7 +11,6 @@ import garden.ephemeral.macfiles.common.types.Blob
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import java.nio.file.Files
-import java.nio.file.Path
 import java.time.Instant
 
 class BookmarkReadTests {
@@ -124,7 +123,7 @@ class BookmarkReadTests {
 
     private fun readFromFile(filename: String): Bookmark {
         // Asserting that parsing actual on-disk aliases does _not_ work.
-        val path = Path.of("src/test/resources/garden/ephemeral/macfiles/bookmark/$filename")
+        val path = getFilePath(filename)
         val buffer = ByteBuffer.wrap(Files.readAllBytes(path))
         val block = Block(buffer)
         return Bookmark.readFrom(block)
