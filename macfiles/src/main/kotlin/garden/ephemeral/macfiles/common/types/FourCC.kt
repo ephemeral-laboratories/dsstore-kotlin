@@ -1,5 +1,7 @@
 package garden.ephemeral.macfiles.common.types
 
+import java.nio.ByteBuffer
+
 /**
  * Data class for a four-character-code.
  *
@@ -17,5 +19,12 @@ data class FourCC(val value: String) : Comparable<FourCC> {
 
     companion object {
         val ZERO: FourCC = FourCC("\u0000\u0000\u0000\u0000")
+
+        fun fromInt(value: Int): FourCC {
+            val array = ByteArray(4)
+            val buffer = ByteBuffer.wrap(array)
+            buffer.putInt(value)
+            return FourCC(array.decodeToString())
+        }
     }
 }
