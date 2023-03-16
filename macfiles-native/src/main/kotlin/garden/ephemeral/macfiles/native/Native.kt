@@ -6,13 +6,13 @@ import garden.ephemeral.macfiles.alias.*
 import garden.ephemeral.macfiles.bookmark.Bookmark
 import garden.ephemeral.macfiles.common.types.FourCC
 import garden.ephemeral.macfiles.native.internal.*
-import garden.ephemeral.macfiles.native.internal.Attrgroup_t
 import garden.ephemeral.macfiles.native.internal.FileInfo
 import garden.ephemeral.macfiles.native.internal.Fsobj_type_t
 import garden.ephemeral.macfiles.native.internal.Size_t
 import garden.ephemeral.macfiles.native.internal.SystemB
 import java.io.File
 import java.text.Normalizer
+import java.time.Instant
 
 /**
  * Creates an [Alias] that points at the specified file.
@@ -51,33 +51,13 @@ private fun getVolumePath(file: File): File {
 
 private fun gatherVolumeInfo(volumePath: File): VolumeInfo.Builder {
     // Grab its attributes
-    val attrListForVolume = SystemB.Attrlist()
-    attrListForVolume.commonattr = SystemB.ATTR_CMN_CRTIME
-    attrListForVolume.volattr = SystemB.ATTR_VOL_NAME
-    // "You should always pass an attrBufSize that is large enough to accommodate the known size of the
-    // attributes in the attribute list (including the leading length field)."
-    val attrBufForVolumeLength = 4L +
-            SystemB.Timespec.SIZE +
-            SystemB.Attrreference_t.SIZE + SystemB.NAME_MAX + 1
-    val attrBufForVolume = Memory(attrBufForVolumeLength)
-    SystemB.INSTANCE.getattrlist(
-        volumePath.absolutePath.toByteArray(),
-        attrListForVolume,
-        attrBufForVolume,
-        Size_t(attrBufForVolumeLength),
-        SystemB.FSOPT_NOFOLLOW
+    val attributes = getAttrList(
+        volumePath,
+        commonAttributes = listOf(SystemB.ATTR_CMN_CRTIME),
+        volumeAttributes = listOf(SystemB.ATTR_VOL_NAME)
     )
-    // Decoding the contents...
-    if (attrBufForVolume.getInt(0) > attrBufForVolumeLength) {
-        throw IllegalStateException("Got attributes longer than the buffer we provided!")
-    }
-    var attrBufOffset = 4L
-    val volumeCreationDate = SystemB.Timespec(attrBufForVolume.share(attrBufOffset)).toInstant()
-    attrBufOffset += SystemB.Timespec.SIZE
-    val volumeNameRef = SystemB.Attrreference_t(attrBufForVolume.share(attrBufOffset))
-    val volumeName = attrBufForVolume
-        .getByteArray(attrBufOffset + volumeNameRef.attr_dataoffset, volumeNameRef.attr_length)
-        .decodeToString().trim('\u0000')
+    val volumeCreationDate = attributes[0] as Instant
+    val volumeName = attributes[1] as String
 
     // XXX: Hard-coding HFS+ here like the original code being converted - but this is not ideal.
     return VolumeInfo.Builder(
@@ -92,61 +72,37 @@ private fun gatherVolumeInfo(volumePath: File): VolumeInfo.Builder {
 }
 
 private fun gatherTargetInfo(file: File, volumePath: File, volumeName: String): TargetInfo.Builder {
-    // Also grab various attributes of the file
-    val attrListForFile = SystemB.Attrlist()
-    attrListForFile.commonattr = Attrgroup_t.unionOf(
-        SystemB.ATTR_CMN_OBJTYPE,
-        SystemB.ATTR_CMN_CRTIME,
-        SystemB.ATTR_CMN_FNDRINFO,
-        SystemB.ATTR_CMN_FILEID,
-        SystemB.ATTR_CMN_PARENTID
+    // Grab various attributes of the file
+    val attributes = getAttrList(
+        file,
+        commonAttributes = listOf(
+            SystemB.ATTR_CMN_OBJTYPE, SystemB.ATTR_CMN_CRTIME, SystemB.ATTR_CMN_FNDRINFO,
+            SystemB.ATTR_CMN_FILEID, SystemB.ATTR_CMN_PARENTID
+        )
     )
-    val attrBufForFileLength = 4L +
-            Fsobj_type_t.SIZE +
-            SystemB.Timespec.SIZE +
-            32 + 8 + 8
-    val attrBufForFile = Memory(attrBufForFileLength)
-    SystemB.INSTANCE.getattrlist(
-        file.absolutePath.toByteArray(),
-        attrListForFile,
-        attrBufForFile,
-        Size_t(attrBufForFileLength),
-        SystemB.FSOPT_NOFOLLOW
-    )
-    var attrBufOffset = 4L
-    // ATTR_CMN_OBJTYPE
-    val file_objtype = Fsobj_type_t(attrBufForFile.getInt(attrBufOffset))
-    attrBufOffset += Fsobj_type_t.SIZE
-    // ATTR_CMN_CRTIME
-    val creationDate = SystemB.Timespec(attrBufForFile.share(attrBufOffset)).toInstant()
-    attrBufOffset += SystemB.Timespec.SIZE
+    val fileObjType = attributes[0] as Fsobj_type_t
+    val creationDate = attributes[1] as Instant
+    @Suppress("UNCHECKED_CAST")
+    val finderInfo = attributes[2] as Pair<FileInfo, ExtendedFileInfo>
+    val cnid = (attributes[3] as Long).asCnid()
+    val folderCnid = (attributes[4] as Long).asCnid()
 
-    // Interrupt the nice program layout to figure out what kind of item it is,
-    // because the contents of ATTR_CMN_FNDRINFO vary depending on which type it is. :/
-    val kind = if (file_objtype.toInt() == Fsobj_type_t.VDIR) Kind.FOLDER else Kind.FILE
-
-    // ATTR_CMN_FNDRINFO
-    val fileInfo = if (kind == Kind.FILE) {
-        FileInfo(attrBufForFile.share(attrBufOffset))
-    } else {
-        // In this branch we have a FolderInfo instead. It's the same size, but doesn't contain
-        // the information we want.
-        null
-    }
-    attrBufOffset += FileInfo.SIZE + ExtendedFileInfo.SIZE
-
-    // ATTR_CMN_FILEID
-    val cnid = attrBufForFile.getLong(attrBufOffset).asCnid()
-    attrBufOffset += 8
-    // ATTR_CMN_PARENTID
-    val folderCnid = attrBufForFile.getLong(attrBufOffset).asCnid()
+    val kind = if (fileObjType.toInt() == Fsobj_type_t.VDIR) Kind.FOLDER else Kind.FILE
 
     val parentFolder = file.absoluteFile.parentFile
     val filename = file.name
     val folderName = parentFolder.name
 
-    val creatorCode = fileInfo?.let { f -> FourCC.fromInt(f.fileCreator.toInt()) } ?: FourCC.ZERO
-    val typeCode = fileInfo?.let { f -> FourCC.fromInt(f.fileType.toInt()) } ?: FourCC.ZERO
+    val creatorCode: FourCC
+    val typeCode: FourCC
+    if (kind == Kind.FILE) {
+        val fileInfo = finderInfo.first
+        creatorCode = FourCC.fromInt(fileInfo.fileCreator.toInt())
+        typeCode = FourCC.fromInt(fileInfo.fileType.toInt())
+    } else {
+        creatorCode = FourCC.ZERO
+        typeCode = FourCC.ZERO
+    }
 
     // Construct the Carbon and CNID paths
     val carbonPathElements = mutableListOf<String>()
@@ -155,18 +111,11 @@ private fun gatherTargetInfo(file: File, volumePath: File, volumeName: String): 
 
     var temp: File? = file.relativeTo(volumePath)
     while (temp != null) {
-        val attrListForAncestor = SystemB.Attrlist()
-        attrListForAncestor.commonattr = SystemB.ATTR_CMN_FILEID
-        val attrBufForAncestorSize = 8L
-        val attrBufForAncestor = Memory(attrBufForAncestorSize)
-        SystemB.INSTANCE.getattrlist(
-            volumePath.resolve(temp).absolutePath.toByteArray(),
-            attrListForAncestor,
-            attrBufForAncestor,
-            Size_t(attrBufForAncestorSize),
-            SystemB.FSOPT_NOFOLLOW
+        val attributesForAncestor = getAttrList(
+            volumePath.resolve(temp),
+            commonAttributes = listOf(SystemB.ATTR_CMN_FILEID)
         )
-        cnidPath.add(attrBufForAncestor.getLong(0L).asCnid())
+        cnidPath.add((attributesForAncestor[0] as Long).asCnid())
         carbonPathElements.add(0, temp.name.replace(':', '/'))
         temp = temp.parentFile
     }
@@ -191,14 +140,17 @@ private fun gatherTargetInfo(file: File, volumePath: File, volumeName: String): 
     )
 }
 
+/**
+ * Creates a [Bookmark] that points at the specified file.
+ * Uses various native macOS routines to fill in the data.
+ *
+ * @param file the file.
+ * @return the bookmark.
+ */
 fun bookmarkForFile(path: File): Bookmark {
     requireMacOS()
 
     /*
-     @classmethod
-     def for_file(cls, path):
-         """Construct a :class:`Bookmark` for a given file."""
-
          # Find the filesystem
          st = osx.statfs(path)
          vol_path = st.f_mntonname.decode("utf-8")

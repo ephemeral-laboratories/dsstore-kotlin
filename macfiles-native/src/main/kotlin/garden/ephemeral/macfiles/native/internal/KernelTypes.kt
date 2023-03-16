@@ -46,8 +46,11 @@ internal class Uid_t(value: Int = 0) : BetterIntegerType(SIZE, value.toLong(), t
  * ```
  */
 internal class Attrgroup_t(value: Int = 0) : BetterIntegerType(SIZE, value.toLong(), true) {
+
     companion object {
         const val SIZE = 4
+
+        val COMPARATOR = Comparator.comparing(Attrgroup_t::toLong)
 
         /**
          * Convenience method to union multiple values and get the right type back.
@@ -56,6 +59,20 @@ internal class Attrgroup_t(value: Int = 0) : BetterIntegerType(SIZE, value.toLon
          * @return the union.
          */
         fun unionOf(vararg values: Attrgroup_t): Attrgroup_t {
+            var union = 0
+            for (value in values) {
+                union = union.or(value.toInt())
+            }
+            return Attrgroup_t(union)
+        }
+
+        /**
+         * Convenience method to union multiple values and get the right type back.
+         *
+         * @param values the values to union.
+         * @return the union.
+         */
+        fun unionOf(values: Iterable<Attrgroup_t>): Attrgroup_t {
             var union = 0
             for (value in values) {
                 union = union.or(value.toInt())
