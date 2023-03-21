@@ -78,7 +78,7 @@ private fun calcCommonAttributeMaxSize(attribute: Attrgroup_t) = when (attribute
     SystemB.ATTR_CMN_FNDRINFO -> 32
     SystemB.ATTR_CMN_FILEID,
     SystemB.ATTR_CMN_PARENTID -> 8
-    else -> throw UnsupportedOperationException("Unsupported attribute")
+    else -> throw UnsupportedOperationException("Unsupported attribute: $attribute")
 }
 
 private fun decodeCommonAttribute(attribute: Attrgroup_t, pointer: Pointer): Pair<Any, Int> = when (attribute) {
@@ -92,15 +92,32 @@ private fun decodeCommonAttribute(attribute: Attrgroup_t, pointer: Pointer): Pai
     }
     SystemB.ATTR_CMN_FILEID,
     SystemB.ATTR_CMN_PARENTID -> Pair(pointer.getLong(0L), 8)
-    else -> throw UnsupportedOperationException("Unsupported attribute")
+    else -> throw UnsupportedOperationException("Unsupported attribute: $attribute")
 }
 
 private fun calcVolumeAttributeMaxSize(attribute: Attrgroup_t) = when (attribute) {
+    SystemB.ATTR_VOL_SIZE,
+    SystemB.ATTR_VOL_SPACEFREE,
+    SystemB.ATTR_VOL_SPACEAVAIL,
+    SystemB.ATTR_VOL_SPACEUSED,
+    SystemB.ATTR_VOL_MINALLOCATION,
+    SystemB.ATTR_VOL_ALLOCATIONCLUMP,
+    SystemB.ATTR_VOL_QUOTA_SIZE,
+    SystemB.ATTR_VOL_RESERVED_SIZE -> Off_t.SIZE
     SystemB.ATTR_VOL_NAME -> SystemB.Attrreference_t.SIZE + SystemB.NAME_MAX + 1
-    else -> throw UnsupportedOperationException("Unsupported attribute")
+    SystemB.ATTR_VOL_UUID -> Uuid_t.SIZE
+    else -> throw UnsupportedOperationException("Unsupported attribute: $attribute")
 }
 
-private fun decodeVolumeAttribute(attribute: Attrgroup_t, pointer: Pointer) = when (attribute) {
+private fun decodeVolumeAttribute(attribute: Attrgroup_t, pointer: Pointer): Pair<Any, Int> = when (attribute) {
+    SystemB.ATTR_VOL_SIZE,
+    SystemB.ATTR_VOL_SPACEFREE,
+    SystemB.ATTR_VOL_SPACEAVAIL,
+    SystemB.ATTR_VOL_SPACEUSED,
+    SystemB.ATTR_VOL_MINALLOCATION,
+    SystemB.ATTR_VOL_ALLOCATIONCLUMP,
+    SystemB.ATTR_VOL_QUOTA_SIZE,
+    SystemB.ATTR_VOL_RESERVED_SIZE -> Pair(Off_t(pointer.getLong(0L)).toLong(), Off_t.SIZE)
     SystemB.ATTR_VOL_NAME -> {
         val ref = SystemB.Attrreference_t(pointer)
         val str = pointer
@@ -108,23 +125,24 @@ private fun decodeVolumeAttribute(attribute: Attrgroup_t, pointer: Pointer) = wh
             .decodeToString().trim('\u0000')
         Pair(str, SystemB.Attrreference_t.SIZE)
     }
-    else -> throw UnsupportedOperationException("Unsupported attribute")
+    SystemB.ATTR_VOL_UUID -> Pair(Uuid_t(pointer.share(0L)).toUuid(), Uuid_t.SIZE)
+    else -> throw UnsupportedOperationException("Unsupported attribute: $attribute")
 }
 
 private fun calcDirectoryAttributeMaxSize(attribute: Attrgroup_t): Int =
-    throw UnsupportedOperationException("None supported yet")
+    throw UnsupportedOperationException("Unsupported attribute: $attribute")
 
 private fun decodeDirectoryAttribute(attribute: Attrgroup_t, pointer: Pointer): Pair<Any, Int> =
-    throw UnsupportedOperationException("None supported yet")
+    throw UnsupportedOperationException("Unsupported attribute: $attribute")
 
 private fun calcFileAttributeMaxSize(attribute: Attrgroup_t): Int =
-    throw UnsupportedOperationException("None supported yet")
+    throw UnsupportedOperationException("Unsupported attribute: $attribute")
 
 private fun decodeFileAttribute(attribute: Attrgroup_t, pointer: Pointer): Pair<Any, Int> =
-    throw UnsupportedOperationException("None supported yet")
+    throw UnsupportedOperationException("Unsupported attribute: $attribute")
 
 private fun calcForkAttributeMaxSize(attribute: Attrgroup_t): Int =
-    throw UnsupportedOperationException("None supported yet")
+    throw UnsupportedOperationException("Unsupported attribute: $attribute")
 
 private fun decodeForkAttribute(attribute: Attrgroup_t, pointer: Pointer): Pair<Any, Int> =
-    throw UnsupportedOperationException("None supported yet")
+    throw UnsupportedOperationException("Unsupported attribute: $attribute")

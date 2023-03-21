@@ -1,6 +1,10 @@
 package garden.ephemeral.macfiles.native.internal
 
 import com.sun.jna.Native
+import com.sun.jna.Pointer
+import com.sun.jna.Structure
+import garden.ephemeral.macfiles.bookmark.types.UUID
+import garden.ephemeral.macfiles.common.types.Blob
 
 // BEWARE: Some types in here may actually be platform-specific, so we might find them
 //         breaking as macOS lands on new architectures. They can be upgraded to detect the
@@ -14,6 +18,18 @@ import com.sun.jna.Native
 internal class Size_t(value: Long = 0) : BetterIntegerType(SIZE, value, true) {
     companion object {
         val SIZE = Native.SIZE_T_SIZE
+    }
+}
+
+/**
+ * ```c
+ * typedef __int64_t	__darwin_off_t;		/* [???] Used for file sizes */
+ * typedef __darwin_off_t          off_t;
+ * ```
+ */
+internal class Off_t(value: Long) : BetterIntegerType(SIZE, value, false) {
+    companion object {
+        const val SIZE = 8
     }
 }
 
@@ -103,5 +119,34 @@ internal class Fsobj_type_t(value: Int = 0) : BetterIntegerType(SIZE, value.toLo
         const val VBAD = 8
         const val VSTR = 9
         const val VCPLX = 10
+    }
+}
+
+/**
+ * ```c
+ * typedef	unsigned char	__darwin_uuid_t[16];
+ * typedef __darwin_uuid_t uuid_t;
+ * ```
+ */
+@Structure.FieldOrder("data")
+internal class Uuid_t(p: Pointer? = null) : Structure(p) {
+    @JvmField
+    val data = ByteArray(16)
+
+    init {
+        if (p != null) {
+            read()
+        }
+    }
+
+    /**
+     * Converts to the public UUID type.
+     *
+     * @return as a UUID.
+     */
+    fun toUuid() = UUID(Blob(data))
+
+    companion object {
+        const val SIZE = 16
     }
 }

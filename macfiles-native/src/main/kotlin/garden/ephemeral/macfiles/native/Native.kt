@@ -1,14 +1,16 @@
 package garden.ephemeral.macfiles.native
 
-import com.sun.jna.Memory
 import com.sun.jna.Platform
 import garden.ephemeral.macfiles.alias.*
 import garden.ephemeral.macfiles.bookmark.Bookmark
+import garden.ephemeral.macfiles.bookmark.BookmarkKeys
+import garden.ephemeral.macfiles.bookmark.types.URL
+import garden.ephemeral.macfiles.bookmark.types.UUID
+import garden.ephemeral.macfiles.common.io.Block
 import garden.ephemeral.macfiles.common.types.FourCC
 import garden.ephemeral.macfiles.native.internal.*
 import garden.ephemeral.macfiles.native.internal.FileInfo
 import garden.ephemeral.macfiles.native.internal.Fsobj_type_t
-import garden.ephemeral.macfiles.native.internal.Size_t
 import garden.ephemeral.macfiles.native.internal.SystemB
 import java.io.File
 import java.text.Normalizer
@@ -38,15 +40,6 @@ fun aliasForFile(file: File): Alias {
     )
 
     return alias.build()
-}
-
-private fun getVolumePath(file: File): File {
-    // Find the filesystem
-    val st = SystemB.Statfs()
-    SystemB.INSTANCE.statfs(file.absolutePath.toByteArray(), st)
-    // File and folder names in HFS+ are normalized to a form similar to NFD.
-    // Must be normalized (NFD->NFC) before use to avoid unicode string comparison issues.
-    return File(Normalizer.normalize(st.f_mntonname.decodeToString().trim('\u0000'), Normalizer.Form.NFC))
 }
 
 private fun gatherVolumeInfo(volumePath: File): VolumeInfo.Builder {
@@ -109,6 +102,7 @@ private fun gatherTargetInfo(file: File, volumePath: File, volumeName: String): 
     val cnidPath = mutableListOf<UInt>()
     val relativePath = file.relativeTo(volumePath)
 
+
     var temp: File? = file.relativeTo(volumePath)
     while (temp != null) {
         val attributesForAncestor = getAttrList(
@@ -147,129 +141,122 @@ private fun gatherTargetInfo(file: File, volumePath: File, volumeName: String): 
  * @param file the file.
  * @return the bookmark.
  */
-fun bookmarkForFile(path: File): Bookmark {
+fun bookmarkForFile(file: File): Bookmark {
     requireMacOS()
 
-    /*
-         # Find the filesystem
-         st = osx.statfs(path)
-         vol_path = st.f_mntonname.decode("utf-8")
+    val absoluteFile = file.absoluteFile
 
-         # Grab its attributes
-         attrs = [
-             osx.ATTR_CMN_CRTIME,
-             osx.ATTR_VOL_SIZE | osx.ATTR_VOL_NAME | osx.ATTR_VOL_UUID,
-             0,
-             0,
-             0,
-             ]
-         volinfo = osx.getattrlist(vol_path, attrs, 0)
+    val volumePath = getVolumePath(absoluteFile)
 
-         vol_crtime = volinfo[0]
-         vol_size = volinfo[1]
-         vol_name = volinfo[2]
-         vol_uuid = volinfo[3]
+    val volumeAttributes = getAttrList(
+        volumePath,
+        commonAttributes = listOf(SystemB.ATTR_CMN_CRTIME),
+        volumeAttributes = listOf(SystemB.ATTR_VOL_SIZE, SystemB.ATTR_VOL_NAME, SystemB.ATTR_VOL_UUID)
+    )
+    val volumeCreationTime = volumeAttributes[0] as Instant
+    val volumeSize = volumeAttributes[1] as Long
+    val volumeName = volumeAttributes[2] as String
+    val volumeUuid = volumeAttributes[3] as UUID
 
-         # Also grab various attributes of the file
-         attrs = [
-             (osx.ATTR_CMN_OBJTYPE | osx.ATTR_CMN_CRTIME | osx.ATTR_CMN_FILEID),
-             0,
-             0,
-             0,
-             0,
-         ]
-         info = osx.getattrlist(path, attrs, osx.FSOPT_NOFOLLOW)
+    val fileAttributes = getAttrList(
+        absoluteFile,
+        commonAttributes = listOf(SystemB.ATTR_CMN_OBJTYPE, SystemB.ATTR_CMN_CRTIME)
+    )
+    val fileObjType = fileAttributes[0] as Fsobj_type_t
+    val fileCreationTime = fileAttributes[1] as Instant
 
-         cnid = info[2]
-         crtime = info[1]
+    val flags = when (fileObjType.toInt()) {
+        Fsobj_type_t.VREG -> kCFURLResourceIsRegularFile
+        Fsobj_type_t.VDIR -> kCFURLResourceIsDirectory
+        Fsobj_type_t.VLNK -> kCFURLResourceIsSymbolicLink
+        else -> kCFURLResourceIsRegularFile
+    }
 
-         if info[0] == osx.VREG:
-             flags = kCFURLResourceIsRegularFile
-         elif info[0] == osx.VDIR:
-             flags = kCFURLResourceIsDirectory
-         elif info[0] == osx.VLNK:
-             flags = kCFURLResourceIsSymbolicLink
-         else:
-             flags = kCFURLResourceIsRegularFile
+    // I guess relcount contains the number of elements from the root to the
+    // current working directory? So that you can take the absolute path stored
+    // in the bookmark and recover the original relative path from it.
+    // I have no idea what the purpose is.
+    var relativeCount = 0
+    if (!file.isRooted) {
+        var temp: File? = File(System.getProperty("user.dir"))
+        while (temp != null) {
+            relativeCount++
+            temp = temp.parentFile
+        }
+    }
 
-         dirname, filename = os.path.split(path)
+    // Build the path arrays
+    val namePath = mutableListOf<String>()
+    val cnidPath = mutableListOf<UInt>()
+    var temp: File? = absoluteFile.relativeTo(volumePath)
+    while (temp != null) {
+        cnidPath.add(0, getCnidFor(volumePath.resolve(temp)))
+        namePath.add(0, temp.name)
+        temp = temp.parentFile
+    }
 
-         relcount = 0
-         if not os.path.isabs(dirname):
-             curdir = os.getcwd()
-             head, tail = os.path.split(curdir)
-             relcount = 0
-             while head and tail:
-                 relcount += 1
-                 head, tail = os.path.split(head)
-             dirname = os.path.join(curdir, dirname)
+    val url_lengths = listOf(relativeCount, namePath.size - relativeCount)
 
-         # ?? foldername = os.path.basename(dirname)
+    // Many esoteric magic numbers ahead. Was copied from code which also did not explain them.
 
-         rel_path = os.path.relpath(path, vol_path)
+    val filePropertiesBlob = Block.create(24) { stream ->
+        stream.writeLongLE(flags)
+        stream.writeLongLE(0x0F)
+        stream.writeLongLE(0)
+    }.toBlob()
 
-         # Build the path arrays
-         name_path = []
-         cnid_path = []
-         head, tail = os.path.split(rel_path)
-         if not tail:
-             head, tail = os.path.split(head)
-         while head or tail:
-             if head:
-                 attrs = [osx.ATTR_CMN_FILEID, 0, 0, 0, 0]
-                 info = osx.getattrlist(os.path.join(vol_path, head), attrs, 0)
-                 cnid_path.insert(0, info[0])
-                 head, tail = os.path.split(head)
-                 name_path.insert(0, tail)
-             else:
-                 head, tail = os.path.split(head)
-         name_path.append(filename)
-         cnid_path.append(cnid)
+    val volumePropertiesBlob = Block.create(24) { stream ->
+        stream.writeLongLE(0x81L.or(kCFURLVolumeSupportsPersistentIDs))
+        stream.writeLongLE(0x13EFL.or(kCFURLVolumeSupportsPersistentIDs))
+        stream.writeLongLE(0)
+    }.toBlob()
 
-         url_lengths = [relcount, len(name_path) - relcount]
+    return Bookmark.build {
+        put(BookmarkKeys.kBookmarkPath, namePath)
+        put(BookmarkKeys.kBookmarkCNIDPath, cnidPath)
+        put(BookmarkKeys.kBookmarkFileCreationDate, fileCreationTime)
+        put(BookmarkKeys.kBookmarkFileProperties, filePropertiesBlob)
+        put(BookmarkKeys.kBookmarkContainingFolder, namePath.size - 2)
+        put(BookmarkKeys.kBookmarkVolumePath, volumePath.toString())
+        put(BookmarkKeys.kBookmarkVolumeIsRoot, volumePath.toString() == "/")
+        put(BookmarkKeys.kBookmarkVolumeURL, URL.Absolute("file://$volumePath"))
+        put(BookmarkKeys.kBookmarkVolumeName, volumeName)
+        put(BookmarkKeys.kBookmarkVolumeSize, volumeSize)
+        put(BookmarkKeys.kBookmarkVolumeCreationDate, volumeCreationTime)
+        put(BookmarkKeys.kBookmarkVolumeUUID, volumeUuid)
+        put(BookmarkKeys.kBookmarkVolumeProperties, volumePropertiesBlob)
+        put(BookmarkKeys.kBookmarkCreationOptions, 512)
+        put(BookmarkKeys.kBookmarkWasFileReference, true)
+        put(BookmarkKeys.kBookmarkUserName, "unknown")
+        put(BookmarkKeys.kBookmarkUID, 99)
 
-         fileprops = Data(struct.pack(b"<QQQ", flags, 0x0F, 0))
-         volprops = Data(
-             struct.pack(
-                 b"<QQQ",
-                 0x81 | kCFURLVolumeSupportsPersistentIDs,
-                 0x13EF | kCFURLVolumeSupportsPersistentIDs,
-                 0,
-                 )
-         )
+        if (relativeCount > 0) {
+            put(BookmarkKeys.kBookmarkURLLengths, url_lengths)
+        }
+    }
+}
 
-         toc = {
-             kBookmarkPath: name_path,
-             kBookmarkCNIDPath: cnid_path,
-             kBookmarkFileCreationDate: crtime,
-             kBookmarkFileProperties: fileprops,
-             kBookmarkContainingFolder: len(name_path) - 2,
-             kBookmarkVolumePath: vol_path,
-             kBookmarkVolumeIsRoot: vol_path == "/",
-             kBookmarkVolumeURL: URL("file://" + vol_path),
-             kBookmarkVolumeName: vol_name,
-             kBookmarkVolumeSize: vol_size,
-             kBookmarkVolumeCreationDate: vol_crtime,
-             kBookmarkVolumeUUID: str(vol_uuid).upper(),
-             kBookmarkVolumeProperties: volprops,
-             kBookmarkCreationOptions: 512,
-             kBookmarkWasFileReference: True,
-             kBookmarkUserName: "unknown",
-             kBookmarkUID: 99,
-         }
-
-         if relcount:
-             toc[kBookmarkURLLengths] = url_lengths
-
-         return Bookmark([(1, toc)])
-      */
-    TODO("Native code for bookmark generation")
+private fun getVolumePath(file: File): File {
+    // Find the filesystem
+    val st = SystemB.Statfs()
+    SystemB.INSTANCE.statfs(file.absolutePath.toByteArray(), st)
+    // File and folder names in HFS+ are normalized to a form similar to NFD.
+    // Must be normalized (NFD->NFC) before use to avoid unicode string comparison issues.
+    return File(Normalizer.normalize(st.f_mntonname.decodeToString().trim('\u0000'), Normalizer.Form.NFC))
 }
 
 private fun requireMacOS() {
     if (!Platform.isMac()) {
         throw UnsupportedOperationException("Not implemented on this platform (requires native macOS support)")
     }
+}
+
+fun getCnidFor(file: File): UInt {
+    val attributesForAncestor = getAttrList(
+        file,
+        commonAttributes = listOf(SystemB.ATTR_CMN_FILEID)
+    )
+    return (attributesForAncestor[0] as Long).asCnid()
 }
 
 private fun Long.asCnid() = if (this >= 0 && this <= UInt.MAX_VALUE.toLong()) {

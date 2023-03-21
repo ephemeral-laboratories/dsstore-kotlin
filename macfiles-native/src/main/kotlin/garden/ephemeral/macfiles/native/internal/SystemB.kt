@@ -140,6 +140,7 @@ internal interface SystemB : Library {
         val ATTR_VOL_ENCODINGSUSED = Attrgroup_t(0x00010000)
         val ATTR_VOL_CAPABILITIES = Attrgroup_t(0x00020000)
         val ATTR_VOL_UUID = Attrgroup_t(0x00040000)
+        val ATTR_VOL_SPACEUSED = Attrgroup_t(0x800000)
         val ATTR_VOL_QUOTA_SIZE = Attrgroup_t(0x10000000)
         val ATTR_VOL_RESERVED_SIZE = Attrgroup_t(0x20000000)
         val ATTR_VOL_ATTRIBUTES = Attrgroup_t(0x40000000)
