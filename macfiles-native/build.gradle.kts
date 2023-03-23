@@ -14,9 +14,6 @@ dependencies {
     // This module directly returns types defined in macfiles
     api(project(":macfiles"))
 
-    // TODO: See whether we need this in this module
-    // implementation("com.googlecode.plist:dd-plist:1.26")
-
     implementation("net.java.dev.jna:jna:5.13.0")
 
     testImplementation(kotlin("test"))

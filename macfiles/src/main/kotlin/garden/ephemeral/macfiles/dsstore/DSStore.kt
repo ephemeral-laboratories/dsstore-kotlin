@@ -21,11 +21,25 @@ class DSStore(private val buddyFile: BuddyFile) : Closeable {
      * Finds the record and decodes the value.
      *
      * @param filename the filename.
-     * @return the partial lookup object.
+     * @param propertyId the property ID to get.
+     * @return the decoded value.
      */
     operator fun get(filename: String, propertyId: FourCC): Any? {
         val record = find(DSStoreRecordKey(filename, propertyId))
         return record?.decodeValue()
+    }
+
+    /**
+     * Support method for convenient indexing when setting.
+     * Encodes the value into a record and then inserts the record.
+     *
+     * @param filename the filename.
+     * @param propertyId the property ID to set.
+     * @param value the value.
+     */
+    operator fun set(filename: String, propertyId: FourCC, value: Any) {
+        val record = DSStoreRecord(filename, propertyId, value)
+        insertOrReplace(record)
     }
 
     /**

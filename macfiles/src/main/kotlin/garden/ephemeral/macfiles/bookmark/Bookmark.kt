@@ -479,7 +479,7 @@ data class Bookmark(
                     }
                 }
 
-                else -> throw IllegalArgumentException("Unsupported item for encoding: $item")
+                else -> throw IllegalArgumentException("Unsupported item for encoding: $item (type is ${item::class})")
             }
 
             val newOffset = offset + encoded.size
