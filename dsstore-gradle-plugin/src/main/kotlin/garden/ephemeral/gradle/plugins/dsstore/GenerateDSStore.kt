@@ -1,12 +1,8 @@
 package garden.ephemeral.gradle.plugins.dsstore
 
-import org.gradle.api.DefaultTask
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Nested
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.*
+import org.gradle.api.file.*
+import org.gradle.api.tasks.*
 
 /**
  * Task to create a `.DS_Store` file in the specified location.

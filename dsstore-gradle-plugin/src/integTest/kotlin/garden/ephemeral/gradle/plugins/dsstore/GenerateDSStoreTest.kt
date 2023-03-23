@@ -1,21 +1,18 @@
 package garden.ephemeral.gradle.plugins.dsstore
 
-import assertk.assertThat
-import assertk.assertions.exists
-import assertk.assertions.isEqualTo
-import garden.ephemeral.macfiles.dsstore.DSStore
-import garden.ephemeral.macfiles.dsstore.DSStoreProperties
-import garden.ephemeral.macfiles.dsstore.types.IntPoint
-import garden.ephemeral.macfiles.dsstore.util.FileMode
-import org.gradle.testkit.runner.BuildResult
-import org.gradle.testkit.runner.GradleRunner
-import org.gradle.testkit.runner.TaskOutcome
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
-import java.awt.image.BufferedImage
-import java.io.File
-import java.nio.file.Files
-import javax.imageio.ImageIO
+import assertk.*
+import assertk.assertions.*
+import assertk.assertions.support.*
+import garden.ephemeral.macfiles.dsstore.*
+import garden.ephemeral.macfiles.dsstore.types.*
+import org.gradle.nativeplatform.platform.internal.*
+import org.gradle.testkit.runner.*
+import org.junit.jupiter.api.*
+import org.junit.jupiter.api.io.*
+import java.awt.image.*
+import java.io.*
+import java.nio.file.*
+import javax.imageio.*
 
 /**
  * Integration tests for [GenerateDSStore] task.
@@ -63,14 +60,19 @@ class GenerateDSStoreTest {
             .withArguments("generateDSStore", "--stacktrace")
             .build()
 
-        assertThat(result.task(":generateDSStore")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-
         val dsStoreFile = testProjectDir.resolve("build/working-dir/my-ds-store")
-        assertThat(dsStoreFile).exists()
-        // Check something we specified to be written into the file
-        DSStore.open(dsStoreFile.toPath()).use { store ->
-            assertThat(store["Acme.app", DSStoreProperties.IconLocation])
-                .isEqualTo(IntPoint(120, 180))
+
+        if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX) {
+            assertThat(result.task(":generateDSStore")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            assertThat(dsStoreFile).exists()
+            // Check something we specified to be written into the file
+            DSStore.open(dsStoreFile.toPath()).use { store ->
+                assertThat(store["Acme.app", DSStoreProperties.IconLocation])
+                    .isEqualTo(IntPoint(120, 180))
+            }
+        } else {
+            assertThat(result.task(":generateDSStore")!!.outcome).isEqualTo(TaskOutcome.SKIPPED)
+            assertThat(dsStoreFile).doesNotExist()
         }
     }
 
@@ -78,5 +80,11 @@ class GenerateDSStoreTest {
         Files.createDirectories(file.parentFile.toPath())
         val image = BufferedImage(400, 300, BufferedImage.TYPE_INT_ARGB)
         ImageIO.write(image, "PNG", file)
+    }
+
+    // https://github.com/willowtreeapps/assertk/issues/448
+    private fun Assert<File>.doesNotExist() = given { actual ->
+        if (!actual.exists()) return
+        expected("not to exist")
     }
 }
