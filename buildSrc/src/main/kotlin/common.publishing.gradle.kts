@@ -21,6 +21,33 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             pom {
+                val projectGitUrl = "https://github.com/ephemeral-laboratories/dsstore-kotlin"
+                name.set(project.name)
+                description.set(project.description)
+                url.set(projectGitUrl)
+                licenses {
+                    license {
+                        name.set("MIT")
+                        url.set("$projectGitUrl/blob/main/COPYING.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("hakanai")
+                        name.set("Hakanai")
+                        email.set("hakanai@ephemeral.garden")
+                        url.set("https://linktr.ee/hakanai")
+                    }
+                }
+                issueManagement {
+                    system.set("GitHub")
+                    url.set("$projectGitUrl/issues")
+                }
+                scm {
+                    url.set(projectGitUrl)
+                    connection.set("scm:git:$projectGitUrl")
+                    developerConnection.set("scm:git:$projectGitUrl")
+                }
             }
         }
     }
