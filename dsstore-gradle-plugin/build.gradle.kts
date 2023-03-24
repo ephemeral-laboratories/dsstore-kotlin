@@ -1,13 +1,14 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.tasks.*
 
 plugins {
     kotlin("jvm") version "1.7.20"
     `java-gradle-plugin`
-    `jvm-test-suite`
     id("com.netflix.nebula.integtest") version "10.1.2"
+    id("com.gradle.plugin-publish") version "1.1.0"
 }
 
-version = "0.1-SNAPSHOT"
+group = "garden.ephemeral.dsstore"
+version = "0.0.1"
 
 repositories {
     mavenCentral()
@@ -41,7 +42,15 @@ gradlePlugin {
     plugins {
         create("dsstore") {
             id = "garden.ephemeral.dsstore"
+            displayName = ".DS_Store generator plugin"
+            description = "Plugin to create macOS .DS_Store files, primarily for putting inside DMGs"
             implementationClass = "garden.ephemeral.gradle.plugins.dsstore.DSStorePlugin"
         }
     }
+}
+
+pluginBundle {
+    website = "https://github.com/ephemeral-laboratories/dsstore-kotlin"
+    vcsUrl = "https://github.com/ephemeral-laboratories/dsstore-kotlin"
+    tags = listOf("macos", "dsstore")
 }
