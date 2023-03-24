@@ -5,6 +5,7 @@ plugins {
     `java-gradle-plugin`
     id("com.netflix.nebula.integtest") version "10.1.2"
     id("com.gradle.plugin-publish") version "1.1.0"
+    id("common.publishing")
 }
 
 group = "garden.ephemeral.dsstore"
