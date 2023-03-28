@@ -6,7 +6,8 @@ plugins {
 }
 
 group = "garden.ephemeral.dsstore"
-version = "0.0.2-SNAPSHOT"
+version = "0.0.2"
+description = "Support for reading/writing various macOS file formats"
 
 repositories {
     mavenCentral()
@@ -29,4 +30,12 @@ tasks.test {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "11"
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+        }
+    }
 }

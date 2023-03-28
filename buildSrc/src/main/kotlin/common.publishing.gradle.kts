@@ -1,9 +1,11 @@
+import gradle.kotlin.dsl.accessors._816f0df7569ef93f755462cdca4104e7.*
 import org.gradle.api.publish.maven.*
 import org.gradle.kotlin.dsl.*
 
 // Publishing configuration we want to share between multiple projects
 
 plugins {
+    java
     `maven-publish`
     signing
 }
@@ -17,9 +19,16 @@ val isReleaseVersion by project.extra {
     isRealRelease && !isSnapshotVersion
 }
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 publishing {
     publications {
-        create<MavenPublication>("mavenJava") {
+        // This is defined here to capture all publications, including those added by
+        // Gradle's plugin publishing plugin.
+        withType<MavenPublication> {
             pom {
                 val projectGitUrl = "https://github.com/ephemeral-laboratories/dsstore-kotlin"
                 name.set(project.name)

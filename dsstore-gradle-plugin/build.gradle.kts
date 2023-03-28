@@ -9,7 +9,8 @@ plugins {
 }
 
 group = "garden.ephemeral.dsstore"
-version = "0.0.2-SNAPSHOT"
+version = "0.0.2"
+description = "Gradle plugin to create macOS .DS_Store files, primarily for putting inside DMGs"
 
 repositories {
     mavenCentral()
@@ -44,7 +45,7 @@ gradlePlugin {
         create("dsstore") {
             id = "garden.ephemeral.dsstore"
             displayName = ".DS_Store generator plugin"
-            description = "Plugin to create macOS .DS_Store files, primarily for putting inside DMGs"
+            description = project.description
             implementationClass = "garden.ephemeral.gradle.plugins.dsstore.DSStorePlugin"
         }
     }
