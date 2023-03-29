@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.*
 
 plugins {
-    kotlin("jvm") version "1.7.20"
+    kotlin("jvm")
     `java-gradle-plugin`
     id("com.netflix.nebula.integtest") version "10.1.2"
     id("com.gradle.plugin-publish") version "1.1.0"
