@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "garden.ephemeral.dsstore"
-version = "0.0.3"
+version = "0.0.4-SNAPSHOT"
 description = "Gradle plugin to create macOS .DS_Store files, primarily for putting inside DMGs"
 
 repositories {
