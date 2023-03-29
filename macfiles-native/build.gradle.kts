@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "garden.ephemeral.dsstore"
-version = "0.0.3-SNAPSHOT"
+version = "0.0.3"
 description = "Additional native support for creating some macOS file formats"
 
 repositories {
