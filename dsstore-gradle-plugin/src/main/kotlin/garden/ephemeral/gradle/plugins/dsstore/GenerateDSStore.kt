@@ -1,72 +1,28 @@
 package garden.ephemeral.gradle.plugins.dsstore
 
 import org.gradle.api.*
-import org.gradle.api.file.*
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.*
+import javax.inject.Inject
 
 /**
  * Task to create a `.DS_Store` file in the specified location.
  */
-abstract class GenerateDSStore : DefaultTask() {
-    /**
-     * The file to write the `.DSStore` file into.
-     */
-    @get:OutputFile
-    abstract val outputFile: RegularFileProperty
+abstract class GenerateDSStore : DefaultTask(), DSStoreGenerator {
+    // For some reason this needs to be the concrete class.
+    // Gradle reflects on the declared return type to determine its properties,
+    // rather than using whatever is present at runtime.
+    @Nested
+    val generator: DefaultDSStoreGenerator = project.objects.newInstance(DefaultDSStoreGenerator::class.java)
 
-    /**
-     * Holds configuration for the root directory.
-     *
-     * This method is public to allow Gradle to see the config, for up-to-date checks.
-     * DSL users should not use this property directly, but should configure the task
-     * using the DSL.
-     */
-    @get:Nested
-    val rootItemConfig: RootItemConfig = project.objects.newInstance(RootItemConfig::class.java)
+    @get:Internal
+    override val outputFile: RegularFileProperty by generator::outputFile
 
-    /**
-     * Holds configuration for each item in the directory.
-     *
-     * This method is public to allow Gradle to see the config, for up-to-date checks.
-     * DSL users should not use this property directly, but should configure the task
-     * using the DSL.
-     */
-    @get:Nested
-    val itemConfigByName = mutableMapOf<String, ItemConfig>()
+    override fun root(configBlock: RootItemConfig.() -> Unit) = generator.root(configBlock)
 
-    /**
-     * DSL for configuring the directory the .DS_Store file resides in.
-     *
-     * @param configBlock the block of logic containing the
-     *        configuration for the root item.
-     */
-    fun root(configBlock: RootItemConfig.() -> Unit) {
-        configBlock(rootItemConfig)
-    }
+    override fun item(name: String, configBlock: ItemConfig.() -> Unit) = generator.item(name, configBlock)
 
-    /**
-     * DSL for configuring an item in the directory.
-     *
-     * @param name the name of the item to configure (its filename.)
-     * @param configBlock the block of logic containing the configuration
-     *        for the root item.
-     */
-    fun item(name: String, configBlock: ItemConfig.() -> Unit) {
-        val itemConfig = itemConfigByName.getOrPut(name) {
-            project.objects.newInstance(ItemConfig::class.java)
-        }
-        configBlock(itemConfig)
-    }
-
-    /**
-     * Action Gradle calls to execute the task.
-     */
     @TaskAction
-    fun generate() {
-        DSStoreGenerator.generate(
-            outputFile.get().asFile.toPath(),
-            rootItemConfig,
-            itemConfigByName
-        )
-    }
+    override fun generate() = generator.generate()
 }
+

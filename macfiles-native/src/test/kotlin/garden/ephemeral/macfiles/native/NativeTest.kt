@@ -100,7 +100,7 @@ class NativeTest {
             .isInstanceOf(List::class)
             .endsWith("macfiles-native", "build.gradle.kts")
         assertThat(toc[BookmarkKeys.kBookmarkCNIDPath]).isNotNull().isInstanceOf(List::class)
-            .index(0).isNotNull().isInstanceOf(UInt::class)
+            .index(0).isNotNull().isInstanceOf(Long::class)
         assertThat(toc[BookmarkKeys.kBookmarkFileCreationDate]).isNotNull().isInstanceOf(Instant::class)
         assertThat(toc[BookmarkKeys.kBookmarkFileProperties]).isEqualTo(
             Blob.fromHexDump("""
@@ -144,7 +144,7 @@ class NativeTest {
             .isInstanceOf(List::class)
             .endsWith("macfiles-native", "build")
         assertThat(toc[BookmarkKeys.kBookmarkCNIDPath]).isNotNull().isInstanceOf(List::class)
-            .index(0).isNotNull().isInstanceOf(UInt::class)
+            .index(0).isNotNull().isInstanceOf(Long::class)
         assertThat(toc[BookmarkKeys.kBookmarkFileCreationDate]).isNotNull().isInstanceOf(Instant::class)
         assertThat(toc[BookmarkKeys.kBookmarkFileProperties]).isEqualTo(
             Blob.fromHexDump("""
