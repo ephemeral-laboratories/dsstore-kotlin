@@ -23,6 +23,53 @@ class GenerateDSStoreTest {
 
     @Test
     fun `generating store file similar to what is in a DMG`() {
+        writeTestProject()
+
+        val result: BuildResult = GradleRunner.create()
+            .withProjectDir(testProjectDir)
+            .withPluginClasspath()
+            .withArguments("generateDSStore", "--stacktrace")
+            .build()
+
+        val dsStoreFile = testProjectDir.resolve("build/working-dir/my-ds-store")
+
+        if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX) {
+            assertThat(result.task(":generateDSStore")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            assertThat(dsStoreFile).exists()
+            // Check something we specified to be written into the file
+            DSStore.open(dsStoreFile.toPath()).use { store ->
+                assertThat(store["Acme.app", DSStoreProperties.IconLocation])
+                    .isEqualTo(IntPoint(120, 180))
+            }
+        } else {
+            assertThat(result.task(":generateDSStore")!!.outcome).isEqualTo(TaskOutcome.SKIPPED)
+            assertThat(dsStoreFile).doesNotExist()
+        }
+    }
+
+    @Test
+    fun `up-to-date behaviour`() {
+        writeTestProject()
+
+        GradleRunner.create()
+            .withProjectDir(testProjectDir)
+            .withPluginClasspath()
+            .withArguments("generateDSStore", "--stacktrace")
+            .build()
+        val result: BuildResult = GradleRunner.create()
+            .withProjectDir(testProjectDir)
+            .withPluginClasspath()
+            .withArguments("generateDSStore", "--stacktrace")
+            .build()
+
+        if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX) {
+            assertThat(result.task(":generateDSStore")!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
+        } else {
+            assertThat(result.task(":generateDSStore")!!.outcome).isEqualTo(TaskOutcome.SKIPPED)
+        }
+    }
+
+    private fun writeTestProject() {
         writeDummyBackgroundImage(testProjectDir.resolve("build/working-dir/.background/Background.png"))
         testProjectDir.resolve("settings.gradle.kts").writeText("")
         testProjectDir.resolve("build.gradle.kts").writeText(
@@ -53,27 +100,6 @@ class GenerateDSStoreTest {
             }
             """.trimIndent()
         )
-
-        val result: BuildResult = GradleRunner.create()
-            .withProjectDir(testProjectDir)
-            .withPluginClasspath()
-            .withArguments("generateDSStore", "--stacktrace")
-            .build()
-
-        val dsStoreFile = testProjectDir.resolve("build/working-dir/my-ds-store")
-
-        if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX) {
-            assertThat(result.task(":generateDSStore")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-            assertThat(dsStoreFile).exists()
-            // Check something we specified to be written into the file
-            DSStore.open(dsStoreFile.toPath()).use { store ->
-                assertThat(store["Acme.app", DSStoreProperties.IconLocation])
-                    .isEqualTo(IntPoint(120, 180))
-            }
-        } else {
-            assertThat(result.task(":generateDSStore")!!.outcome).isEqualTo(TaskOutcome.SKIPPED)
-            assertThat(dsStoreFile).doesNotExist()
-        }
     }
 
     private fun writeDummyBackgroundImage(file: File) {
