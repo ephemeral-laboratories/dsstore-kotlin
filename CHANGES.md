@@ -1,5 +1,5 @@
 
-Unreleased
+**Version 0.0.7 (12 May 2023)**
 
 - Changed `statfs` call to `statfs64`, as newer macOS was
   returning a different structure for the former which did
