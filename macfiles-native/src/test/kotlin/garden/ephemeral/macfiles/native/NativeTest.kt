@@ -1,20 +1,17 @@
 package garden.ephemeral.macfiles.native
 
-import assertk.all
-import assertk.assertThat
+import assertk.*
 import assertk.assertions.*
-import garden.ephemeral.macfiles.alias.FileSystemType
-import garden.ephemeral.macfiles.alias.Kind
-import garden.ephemeral.macfiles.alias.VolumeType
-import garden.ephemeral.macfiles.bookmark.BookmarkKeys
-import garden.ephemeral.macfiles.bookmark.types.URL
-import garden.ephemeral.macfiles.bookmark.types.UUID
-import garden.ephemeral.macfiles.common.types.Blob
-import garden.ephemeral.macfiles.common.types.FourCC
-import java.io.File
-import java.time.Instant
-import kotlin.test.Test
+import garden.ephemeral.macfiles.alias.*
+import garden.ephemeral.macfiles.bookmark.*
+import garden.ephemeral.macfiles.bookmark.types.*
+import garden.ephemeral.macfiles.common.types.*
+import org.junit.jupiter.api.condition.*
+import java.io.*
+import java.time.*
+import kotlin.test.*
 
+@EnabledOnOs(OS.MAC)
 class NativeTest {
     @Test
     fun `generating alias for a file`() {
