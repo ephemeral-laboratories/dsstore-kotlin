@@ -1,4 +1,10 @@
 
+Unreleased
+
+- Changed `statfs` call to `statfs64`, as newer macOS was
+  returning a different structure for the former which did
+  not match the docs.
+
 **Version 0.0.6 (9 May 2023)**
 
 - Extracted a public interface for running the generator

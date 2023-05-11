@@ -1,9 +1,7 @@
 package garden.ephemeral.macfiles.native.internal
 
 import com.sun.jna.*
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
+import java.time.*
 
 internal interface SystemB : Library {
 
@@ -13,13 +11,21 @@ internal interface SystemB : Library {
      * ```c
      * int
      * statfs(const char *path, struct statfs *buf);
+     *
+     * int
+     * statfs64(const char *path, struct statfs *buf);
      * ```
+     *
+     * The macOS docs say that these two methods behave identically. However, we find that on
+     * the latest macOS, an additional 16 bytes are appearing somewhere inside the structure.
+     * Thus, for now, we call the deprecated `statfs64` variant, and hope that macOS does something
+     * about fixing the other method before removing it.
      *
      * @param path the path to the file.
      * @param buf a statfs structure which will be filled during the call.
      */
     @Throws(LastErrorException::class)
-    fun statfs(path: ByteArray, buf: Statfs)
+    fun statfs64(path: ByteArray, buf: Statfs)
 
     /**
      * Gets attributes for a file, directory, volume, etc.
@@ -203,6 +209,8 @@ internal interface SystemB : Library {
      *     char        f_fstypename[MFSTYPENAMELEN];   /* fs type name */
      *     char        f_mntonname[MAXPATHLEN];        /* directory on which mounted */
      *     char        f_mntfromname[MAXPATHLEN];      /* mounted filesystem */
+     *     // <- The online docs show an extra uint32 f_flags_ext here, taking up the first reserved slot.
+     *     //    The docs on the local machine do not show this.
      *     uint32_t    f_reserved[8];  /* For future use */
      * };
      * ```
