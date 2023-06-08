@@ -1,8 +1,23 @@
 package garden.ephemeral.macfiles.native.internal
 
-import com.sun.jna.Memory
-import com.sun.jna.Pointer
-import java.io.File
+import com.sun.jna.*
+import java.io.*
+import java.text.*
+
+/**
+ * Convenience method around [SystemB.statfs64] to get just the volume path.
+ *
+ * @param file the file to query the volume path for.
+ * @return the path to the volume containing the file.
+ */
+internal fun getVolumePath(file: File): File {
+    // Find the filesystem
+    val st = SystemB.Statfs()
+    SystemB.INSTANCE.statfs64(file.absolutePath.toByteArray(), st)
+    // File and folder names in HFS+ are normalized to a form similar to NFD.
+    // Must be normalized (NFD->NFC) before use to avoid unicode string comparison issues.
+    return File(Normalizer.normalize(st.f_mntonname.decodeToString().trim('\u0000'), Normalizer.Form.NFC))
+}
 
 /**
  * Convenience method around [SystemB.getattrlist] which takes care of packaging the
