@@ -1,4 +1,9 @@
 
+**Unreleased**
+
+- Check for file existence up-front in native code, to get
+  a more useful error when that is the case.
+
 **Version 0.0.7 (12 May 2023)**
 
 - Changed `statfs` call to `statfs64`, as newer macOS was

@@ -1,10 +1,10 @@
 package garden.ephemeral.macfiles.native
 
 import garden.ephemeral.macfiles.alias.*
-import garden.ephemeral.macfiles.common.types.FourCC
+import garden.ephemeral.macfiles.common.types.*
 import garden.ephemeral.macfiles.native.internal.*
-import java.io.File
-import java.time.Instant
+import java.io.*
+import java.time.*
 
 /**
  * Creates an [Alias] that points at the specified file.
@@ -12,9 +12,12 @@ import java.time.Instant
  *
  * @param file the file.
  * @return the alias.
+ * @throws NoSuchFileException if the file does not exist.
  */
+@Throws(NoSuchFileException::class)
 fun aliasForFile(file: File): Alias {
     requireMacOS()
+    checkFileExists(file)
 
     val absoluteFile = file.absoluteFile
 

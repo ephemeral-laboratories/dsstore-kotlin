@@ -1,13 +1,11 @@
 package garden.ephemeral.macfiles.native
 
-import garden.ephemeral.macfiles.bookmark.Bookmark
-import garden.ephemeral.macfiles.bookmark.BookmarkKeys
-import garden.ephemeral.macfiles.bookmark.types.URL
-import garden.ephemeral.macfiles.bookmark.types.UUID
-import garden.ephemeral.macfiles.common.io.Block
+import garden.ephemeral.macfiles.bookmark.*
+import garden.ephemeral.macfiles.bookmark.types.*
+import garden.ephemeral.macfiles.common.io.*
 import garden.ephemeral.macfiles.native.internal.*
-import java.io.File
-import java.time.Instant
+import java.io.*
+import java.time.*
 
 /**
  * Creates a [Bookmark] that points at the specified file.
@@ -15,9 +13,12 @@ import java.time.Instant
  *
  * @param file the file.
  * @return the bookmark.
+ * @throws NoSuchFileException if the file does not exist.
  */
+@Throws(NoSuchFileException::class)
 fun bookmarkForFile(file: File): Bookmark {
     requireMacOS()
+    checkFileExists(file)
 
     val absoluteFile = file.absoluteFile
 
