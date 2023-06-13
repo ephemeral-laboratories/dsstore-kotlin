@@ -1,5 +1,5 @@
 
-**Unreleased**
+**Version 0.0.8 (13 June 2023)**
 
 - Changed some native params from `ByteArray` to `String`
   to fix unterminated string issues.
