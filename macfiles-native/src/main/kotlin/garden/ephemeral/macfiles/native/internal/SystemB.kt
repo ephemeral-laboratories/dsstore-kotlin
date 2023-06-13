@@ -25,7 +25,7 @@ internal interface SystemB : Library {
      * @param buf a statfs structure which will be filled during the call.
      */
     @Throws(LastErrorException::class)
-    fun statfs64(path: ByteArray, buf: Statfs)
+    fun statfs64(path: String, buf: Statfs)
 
     /**
      * Gets attributes for a file, directory, volume, etc.
@@ -42,10 +42,15 @@ internal interface SystemB : Library {
      * ```
      *
      * @param path the path to the thing.
-     * @param
+     * @param attrList an [Attrlist] structure specifying which attributes to return.
+     * @param attrBuf a pointer to a buffer to receive the attribute values.
+     * @param attrBufSize the size of the memory allocated in [attrBuf].
+     * @param options a bitset of options for how to perform the operation.
+     *        Most commonly, [SystemB.FSOPT_NOFOLLOW] specifies not to follow symlinks if the last element
+     *        in the file path specifies a symlink.
      */
     @Throws(LastErrorException::class)
-    fun getattrlist(path: ByteArray, attrlist: Attrlist, attrBuf: Pointer, attrBufSize: Size_t, options: Long)
+    fun getattrlist(path: String, attrList: Attrlist, attrBuf: Pointer, attrBufSize: Size_t, options: Long)
 
 
     companion object {

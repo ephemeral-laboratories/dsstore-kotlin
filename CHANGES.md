@@ -1,6 +1,8 @@
 
 **Unreleased**
 
+- Changed some native params from `ByteArray` to `String`
+  to fix unterminated string issues.
 - Check for file existence up-front in native code, to get
   a more useful error when that is the case.
 
