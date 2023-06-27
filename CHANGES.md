@@ -1,4 +1,8 @@
 
+**Version 0.0.9 (28 June 2023)**
+
+- No code changes, rebuilding to fix a compile-time issue.
+
 **Version 0.0.8 (13 June 2023)**
 
 - Changed some native params from `ByteArray` to `String`

@@ -16,6 +16,7 @@ This is still a somewhat manual process.
 7. Run the release tasks
 
     ```shell
+    ./gradlew clean
     ./gradlew publishAllPublicationsToMavenRepository -PrealRelease=true
     ./gradlew publishPlugins
     ```
